@@ -1,0 +1,1 @@
+enum CustomerStatus { active, inactive }

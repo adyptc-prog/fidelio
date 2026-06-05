@@ -1,0 +1,35 @@
+{
+    "name": "Fidelio",
+    "short_name": "Fidelio",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0B3B34",
+    "theme_color": "#0B3B34",
+    "description": "Local loyalty and membership management for small businesses. No server accounts required.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
