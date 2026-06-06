@@ -1,87 +1,139 @@
-# Fidelio Local Loyalty
+# Fidelio
 
-Fidelio is a local-first Flutter application for small businesses that need
-membership cards, loyalty cards, QR/NFC check-in, USB licensing, and USB backup
-without server accounts.
+**Local loyalty and membership management for small businesses.**
+No server. No internet. No accounts.
 
-## Core Modes
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Flutter](https://img.shields.io/badge/Flutter-3.10%2B-02569B?logo=flutter)](https://flutter.dev)
+[![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android)](https://www.android.com)
+
+---
+
+## What is Fidelio?
+
+Fidelio is a free, open-source Flutter app that lets small businesses manage loyalty cards and memberships entirely on-device — no server, no subscription, no internet connection required.
+
+Works for coffee shops, salons, restaurants, delivery services, gyms, and any business that wants to reward loyal customers.
+
+---
+
+## Features
 
 ### Business Mode
-
-- Create and manage customers.
-- Issue memberships and loyalty cards.
-- Scan customer QR/NFC access codes.
-- Track recent check-ins.
-- Configure business profile, card colors, and app display settings.
-- Create and restore local USB backups.
-- Check USB-C lifetime license status.
+- Create and manage customers
+- Issue **membership cards** (with expiry dates and entry counts)
+- Issue **loyalty cards** — stamps, points, visit challenges, delivery
+- Validate access via **QR scan** or **NFC** (Android)
+- View full check-in history
+- **Daily automatic USB backup**
+- USB-C lifetime license for unlimited cards
 
 ### Client Mode
+- Import cards by scanning a business QR code or via NFC
+- Wallet view in list or grid
+- Generate a **dynamic QR or NFC access code** for any card
+- Update card locally after each visit
 
-- Import cards received from a business by QR or NFC.
-- View wallet cards in list or grid mode.
-- Generate QR or NFC access for a selected card.
-- Update the local wallet card after the business scans the access code.
+---
 
-## Free Limit And License
+## How It Works
 
-The app allows 10 free memberships/loyalty cards per business. After that limit,
-new cards require a valid USB-C license.
-
-License support contact:
-
-```text
-voltacademy007@gmail.com
+```
+Business creates card  →  shares via QR/NFC
+Client imports card    →  generates dynamic access code
+Business scans code    →  validates locally, updates card
 ```
 
-On Android, place the license file on the USB-C stick at:
+All validation happens on-device. QR codes are time-limited and signed with HMAC-SHA256. NFC uses Android HCE (Host Card Emulation). Replay attacks are prevented by a unique index on each signature.
 
-```text
-/Fidelio/fidelio_license.json
-```
+---
 
-The license screen can check again or select the license file manually.
+## Free Tier & License
 
-## QR And NFC Flow
+| Cards per business | Requirement |
+|---|---|
+| Up to 10 | Free forever |
+| Unlimited | USB-C lifetime license |
 
-Business-issued cards can be shared with the client by QR or NFC. The client can
-then open a card, generate QR/NFC access, and show or present it to the business.
-The business scanner validates the dynamic access payload locally and prevents
-reused valid QR/NFC codes.
+To issue a license, place `fidelio_license.json` on a USB-C stick at `/Fidelio/fidelio_license.json`. The app detects it automatically on Android.
 
-After a successful scan, the client can tap `Update local card` to decrement the
-local wallet copy on the phone. The business database remains the source of truth
-for business-side check-ins.
+License inquiries: **adyptc@gmail.com**
 
-## Backup And Restore
+---
 
-Business mode supports USB backup and restore on Android. Restoring a backup
-replaces local data with the selected backup and reloads the app providers after
-restore.
+## Platform Support
 
-## Development
+| Feature | Android | iOS |
+|---|---|---|
+| QR scan & generate | ✅ | ✅ |
+| NFC access | ✅ | ❌ |
+| USB backup | ✅ | ❌ |
+| USB license | ✅ | ❌ |
 
-Install Flutter, then run:
+NFC and USB features use Android platform channels and are not available on iOS.
+
+---
+
+## Getting Started
+
+### Requirements
+- Flutter SDK 3.10+
+- Android SDK (minSdk 24 — Android 7.0)
+
+### Run
 
 ```bash
+git clone https://github.com/adyptc-prog/fidelio.git
+cd fidelio
 flutter pub get
-flutter test
+flutter run
 ```
 
-Run static analysis:
+### Test
 
 ```bash
-dart analyze lib test
+flutter test
+dart analyze
 ```
 
-Important test areas:
+### Build release APK
 
-- `test/local_qr_service_test.dart`
-- `test/business_check_in_controller_test.dart`
-- `test/local_database_repositories_test.dart`
-- `test/widget_test.dart`
+```bash
+flutter build apk --release
+```
 
-## Platform Notes
+---
 
-QR functionality is pure Flutter. NFC, USB license detection, and USB backup are
-implemented through Android platform channels and are available only on Android.
+## Architecture
+
+Clean architecture with three layers:
+
+```
+lib/
+  domain/       # Entities, service interfaces, value objects
+  data/         # Drift/SQLite repositories, Android services
+  features/     # UI screens per feature
+  app/          # Riverpod providers, router, theme
+```
+
+- **State management:** Riverpod (`AsyncNotifierProvider`)
+- **Navigation:** GoRouter
+- **Database:** Drift (SQLite, local-only)
+- **QR:** `mobile_scanner` + `qr_flutter`
+
+---
+
+## Contributing
+
+Pull requests are welcome. For major changes, open an issue first.
+
+All contributions must be compatible with the AGPL-3.0 license.
+
+---
+
+## License
+
+This project is licensed under the **GNU Affero General Public License v3.0**.
+See [LICENSE](LICENSE) for details.
+
+© 2026 Fidelio Contributors
