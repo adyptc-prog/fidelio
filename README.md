@@ -123,6 +123,12 @@ lib/
 
 ---
 
+## Author
+
+**Adrian Petcu** — [Volt Academy](mailto:adyptc@gmail.com)
+
+---
+
 ## Contributing
 
 Pull requests are welcome. For major changes, open an issue first.
@@ -136,4 +142,4 @@ All contributions must be compatible with the AGPL-3.0 license.
 This project is licensed under the **GNU Affero General Public License v3.0**.
 See [LICENSE](LICENSE) for details.
 
-© 2026 Fidelio Contributors
+© 2026 Adrian Petcu — Volt Academy
