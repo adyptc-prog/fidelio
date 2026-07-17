@@ -515,7 +515,7 @@ Future<void> _seedBusinessAndSubscription(
       status: CardStatus.active,
       subscriptionType: SubscriptionType.entries,
       startsAt: now,
-      expiresAt: now.add(const Duration(days: 30)),
+      expiresAt: DateTime.utc(2099, 12, 31),
       remainingUses: remainingUses,
       linkedWalletId: linkedWalletId,
     ),

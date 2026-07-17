@@ -149,7 +149,7 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
     });
 
     try {
-      await ref
+      final warning = await ref
           .read(businessSubscriptionActionsProvider)
           .createLoyaltyCard(
             businessId: widget.customer.businessId,
@@ -168,6 +168,15 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
 
       if (!mounted) {
         return;
+      }
+      if (warning != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(warning),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 6),
+          ),
+        );
       }
       Navigator.of(context).pop();
     } on LicenseRequiredException {

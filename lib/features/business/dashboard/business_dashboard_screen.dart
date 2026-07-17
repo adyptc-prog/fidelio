@@ -291,9 +291,20 @@ class _LicenseStatusBanner extends ConsumerWidget {
       data: (status) => switch (status.state) {
         LicenseState.active => Card(
           child: ListTile(
-            leading: const Icon(Icons.verified, color: Colors.green),
-            title: const Text('License active'),
-            subtitle: const Text('Unlimited cards enabled.'),
+            leading: Icon(
+              Icons.verified,
+              color: status.isExpiringSoon ? Colors.orange : Colors.green,
+            ),
+            title: Text(
+              status.isExpiringSoon ? 'License expiring soon' : 'License active',
+            ),
+            subtitle: Text(
+              status.isExpiringSoon && status.daysUntilExpiry != null
+                  ? status.daysUntilExpiry! <= 1
+                      ? 'Expires tomorrow! Renew to avoid interruptions.'
+                      : '${status.daysUntilExpiry} days remaining. Renew to avoid interruptions.'
+                  : 'Unlimited cards enabled.',
+            ),
           ),
         ),
         LicenseState.missing => Card(

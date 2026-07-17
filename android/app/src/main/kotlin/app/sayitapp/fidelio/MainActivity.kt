@@ -440,6 +440,9 @@ class MainActivity : FlutterActivity(), NfcAdapter.ReaderCallback {
             val licenseBusinessId = payload.optString("businessId")
             val licenseStickId = payload.optString("stickId")
             val isLifetime = payload.optBoolean("isLifetime", false)
+            val validUntilStr = if (payload.isNull("validUntil")) null
+                                else payload.optString("validUntil").takeIf { it.isNotBlank() }
+            val issuedAtStr = payload.optString("issuedAt")
             val actualStickId = licenseSource.stickId
 
             if (licenseBusinessId != businessId) {
@@ -450,10 +453,29 @@ class MainActivity : FlutterActivity(), NfcAdapter.ReaderCallback {
                 result.success(licenseResult("invalid", "License does not match this USB stick.", licenseSource.path))
                 return
             }
-            if (!isLifetime) {
-                result.success(licenseResult("invalid", "License is not lifetime.", licenseSource.path))
+
+            // Anti-clock-manipulation: use the monotonically-increasing effective time.
+            val effectiveNow = getEffectiveNow()
+
+            // Reject if the device clock is set before the license issue date.
+            val issuedAtMs = parseIso8601Utc(issuedAtStr)
+            if (issuedAtMs != null && effectiveNow < issuedAtMs) {
+                result.success(licenseResult("invalid", "Device clock is set before the license issue date.", licenseSource.path))
                 return
             }
+
+            if (!isLifetime) {
+                val validUntilMs = parseIso8601Utc(validUntilStr)
+                if (validUntilMs == null) {
+                    result.success(licenseResult("invalid", "License has no valid expiry date.", licenseSource.path))
+                    return
+                }
+                if (effectiveNow >= validUntilMs) {
+                    result.success(licenseResult("invalid", "License has expired.", licenseSource.path))
+                    return
+                }
+            }
+
             if (!verifyLicenseSignature(payload, signature)) {
                 result.success(licenseResult("invalid", "License signature is invalid.", licenseSource.path))
                 return
@@ -461,13 +483,53 @@ class MainActivity : FlutterActivity(), NfcAdapter.ReaderCallback {
 
             val data = HashMap<String, Any?>()
             data["status"] = "active"
-            data["message"] = "Lifetime license active."
             data["path"] = licenseSource.path
             data["licenseId"] = payload.optString("licenseId")
             data["stickId"] = payload.optString("stickId")
+            data["isLifetime"] = isLifetime
+
+            if (!isLifetime && validUntilStr != null) {
+                val validUntilMs = parseIso8601Utc(validUntilStr)!!
+                val daysRemaining = ((validUntilMs - effectiveNow) / (24L * 60L * 60L * 1000L)).toInt()
+                data["validUntil"] = validUntilStr
+                data["daysUntilExpiry"] = daysRemaining
+                data["message"] = if (daysRemaining <= 1) "License expires tomorrow."
+                                   else "License active. $daysRemaining days remaining."
+            } else {
+                data["message"] = "Lifetime license active."
+            }
+
             result.success(data)
         } catch (error: Exception) {
             result.success(licenseResult("invalid", error.message ?: error.toString(), licenseSource.path))
+        }
+    }
+
+    /**
+     * Returns a monotonically non-decreasing effective timestamp that cannot be
+     * moved backward by the user changing the device clock.
+     *
+     * On every call we persist max(deviceNow, lastStoredTime). If the device
+     * clock is rolled back by more than one minute we return lastStoredTime so
+     * the expiry check still uses the highest time we've ever seen.
+     */
+    private fun getEffectiveNow(): Long {
+        val prefs = getSharedPreferences(LICENSE_PREFS_NAME, Context.MODE_PRIVATE)
+        val lastMs = prefs.getLong(KEY_LAST_LICENSE_CHECK, 0L)
+        val deviceNow = System.currentTimeMillis()
+        val effectiveNow = if (deviceNow < lastMs - 60_000L) lastMs else maxOf(deviceNow, lastMs)
+        prefs.edit().putLong(KEY_LAST_LICENSE_CHECK, effectiveNow).apply()
+        return effectiveNow
+    }
+
+    private fun parseIso8601Utc(dateStr: String?): Long? {
+        if (dateStr.isNullOrBlank()) return null
+        return try {
+            java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }.parse(dateStr)?.time
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -894,6 +956,7 @@ class MainActivity : FlutterActivity(), NfcAdapter.ReaderCallback {
         private const val BACKUP_CHANNEL_NAME = "fidelio/backup"
         private const val LICENSE_PREFS_NAME = "fidelio_license_prefs"
         private const val KEY_LICENSE_URI = "license_uri"
+        private const val KEY_LAST_LICENSE_CHECK = "last_license_check_epoch"
         private const val PICK_LICENSE_REQUEST_CODE = 8021
         private const val BACKUP_PREFS_NAME = "fidelio_backup_prefs"
         private const val KEY_BACKUP_FOLDER_URI = "backup_folder_uri"

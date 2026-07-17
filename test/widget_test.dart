@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:fidelio/app/app.dart';
 import 'package:fidelio/app/providers/app_settings_providers.dart';
 import 'package:fidelio/app/providers/client_wallet_providers.dart';
+import 'package:fidelio/app/providers/license_providers.dart';
 import 'package:fidelio/data/local_db/app_database.dart';
 import 'package:fidelio/data/repositories/drift_repositories.dart';
 import 'package:fidelio/domain/entities/app_settings.dart';
 import 'package:fidelio/domain/entities/business_profile.dart';
 import 'package:fidelio/domain/entities/customer_record.dart';
+import 'package:fidelio/domain/entities/license_status.dart';
 import 'package:fidelio/domain/entities/loyalty_card.dart';
 import 'package:fidelio/domain/entities/subscription_card.dart';
 import 'package:fidelio/domain/entities/wallet_card.dart';
@@ -818,6 +820,145 @@ void main() {
       isNull,
     );
   });
+
+  testWidgets(
+    'business membership shows expiry warning snackbar when license expires soon',
+    (tester) async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      await _seedBusinessWithCustomer(db);
+      await _seedFreeLimitCards(db);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            businessLicenseStatusProvider.overrideWith(
+              (ref, businessId) async => const LicenseStatus(
+                state: LicenseState.active,
+                message: 'License active. 5 days remaining.',
+                isLifetime: false,
+                daysUntilExpiry: 5,
+                validUntil: '2026-06-29T00:00:00Z',
+              ),
+            ),
+          ],
+          child: const LocalLoyaltyApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.people));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ana Client'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create Membership'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('License required'), findsNothing);
+      expect(
+        find.textContaining('License expires in 5 days'),
+        findsOneWidget,
+      );
+      expect(
+        await DriftCardRepository(db).listSubscriptionCards('business-1'),
+        hasLength(11),
+      );
+    },
+  );
+
+  testWidgets(
+    'business loyalty card shows tomorrow expiry warning when 1 day remains',
+    (tester) async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      await _seedBusinessWithCustomer(db);
+      await _seedFreeLimitCards(db);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            businessLicenseStatusProvider.overrideWith(
+              (ref, businessId) async => const LicenseStatus(
+                state: LicenseState.active,
+                message: 'License expires tomorrow.',
+                isLifetime: false,
+                daysUntilExpiry: 1,
+                validUntil: '2026-06-25T00:00:00Z',
+              ),
+            ),
+          ],
+          child: const LocalLoyaltyApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.people));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ana Client'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create Loyalty Card'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('License required'), findsNothing);
+      expect(find.textContaining('expires tomorrow'), findsOneWidget);
+      expect(
+        await DriftCardRepository(db).listLoyaltyCards('business-1'),
+        hasLength(1),
+      );
+    },
+  );
+
+  testWidgets(
+    'business membership does not show expiry warning when license has 11 days remaining',
+    (tester) async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      await _seedBusinessWithCustomer(db);
+      await _seedFreeLimitCards(db);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            businessLicenseStatusProvider.overrideWith(
+              (ref, businessId) async => const LicenseStatus(
+                state: LicenseState.active,
+                message: 'License active. 11 days remaining.',
+                isLifetime: false,
+                daysUntilExpiry: 11,
+                validUntil: '2026-07-05T00:00:00Z',
+              ),
+            ),
+          ],
+          child: const LocalLoyaltyApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.people));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ana Client'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create Membership'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('License required'), findsNothing);
+      expect(find.textContaining('expires in'), findsNothing);
+      expect(find.textContaining('expires tomorrow'), findsNothing);
+      expect(
+        await DriftCardRepository(db).listSubscriptionCards('business-1'),
+        hasLength(11),
+      );
+    },
+  );
 }
 
 Future<void> _seedBusinessWithCustomer(AppDatabase db) async {

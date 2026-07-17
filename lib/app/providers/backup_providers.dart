@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/local_db/app_database.dart';
 import '../../data/services/android_usb_backup_service.dart';
 import '../../domain/entities/usb_backup_entry.dart';
 import 'app_settings_providers.dart';
@@ -40,6 +41,7 @@ class BackupRestoreController {
     final businessId =
         _ref.read(businessProfileControllerProvider).valueOrNull?.businessId;
 
+    _ref.invalidate(appDatabaseProvider);
     _ref.invalidate(appSettingsControllerProvider);
     _ref.invalidate(businessProfileControllerProvider);
     _ref.invalidate(businessCustomersControllerProvider);

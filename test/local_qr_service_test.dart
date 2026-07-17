@@ -237,5 +237,224 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test('rejects loyalty import payload with empty subscriptionId', () {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = service.createLoyaltyImportPayload(
+        business: BusinessProfile(
+          businessId: 'business-1',
+          displayName: 'Coffee Shop',
+          createdAt: issuedAt,
+        ),
+        loyaltyCard: LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-1',
+          customerId: 'customer-1',
+          name: 'Coffee loyalty',
+          createdAt: issuedAt,
+          status: CardStatus.active,
+          currentStamps: 0,
+          rewardThreshold: 8,
+        ),
+      );
+      final json = payload.toJson()..['subscriptionId'] = '';
+
+      expect(
+        () => service.decodeSubscriptionImportPayload(jsonEncode(json)),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects loyalty import payload with empty businessId', () {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = service.createLoyaltyImportPayload(
+        business: BusinessProfile(
+          businessId: 'business-1',
+          displayName: 'Coffee Shop',
+          createdAt: issuedAt,
+        ),
+        loyaltyCard: LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-1',
+          customerId: 'customer-1',
+          name: 'Coffee loyalty',
+          createdAt: issuedAt,
+          status: CardStatus.active,
+          currentStamps: 0,
+          rewardThreshold: 8,
+        ),
+      );
+      final json = payload.toJson()..['businessId'] = '';
+
+      expect(
+        () => service.decodeSubscriptionImportPayload(jsonEncode(json)),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects import payload with invalid cardType', () {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = service.createLoyaltyImportPayload(
+        business: BusinessProfile(
+          businessId: 'business-1',
+          displayName: 'Coffee Shop',
+          createdAt: issuedAt,
+        ),
+        loyaltyCard: LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-1',
+          customerId: 'customer-1',
+          name: 'Coffee loyalty',
+          createdAt: issuedAt,
+          status: CardStatus.active,
+          currentStamps: 0,
+          rewardThreshold: 8,
+        ),
+      );
+      final json = payload.toJson()..['cardType'] = 'reward_points';
+
+      expect(
+        () => service.decodeSubscriptionImportPayload(jsonEncode(json)),
+        throwsFormatException,
+      );
+    });
+
+    test('stamps remaining is clamped to zero when stamps exceed threshold', () {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = service.createLoyaltyImportPayload(
+        business: BusinessProfile(
+          businessId: 'business-1',
+          displayName: 'Coffee Shop',
+          createdAt: issuedAt,
+        ),
+        loyaltyCard: LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-1',
+          customerId: 'customer-1',
+          name: 'Coffee loyalty',
+          createdAt: issuedAt,
+          status: CardStatus.active,
+          currentStamps: 12,
+          rewardThreshold: 8,
+        ),
+      );
+
+      expect(payload.entriesRemaining, 0);
+      expect(payload.entriesTotal, 8);
+    });
+  });
+
+  group('LocalQrService dynamic challenge — edge cases', () {
+    final issuedAt = DateTime.utc(2026, 5, 13, 10);
+
+    test('throws ArgumentError for empty walletId', () async {
+      final service = LocalQrService(clock: () => issuedAt);
+
+      await expectLater(
+        service.createDynamicChallenge(walletId: '', cardId: 'card-1'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('throws ArgumentError for whitespace-only walletId', () async {
+      final service = LocalQrService(clock: () => issuedAt);
+
+      await expectLater(
+        service.createDynamicChallenge(walletId: '   ', cardId: 'card-1'),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('throws ArgumentError for empty cardId', () async {
+      final service = LocalQrService(clock: () => issuedAt);
+
+      await expectLater(
+        service.createDynamicChallenge(walletId: 'wallet-1', cardId: ''),
+        throwsA(isA<ArgumentError>()),
+      );
+    });
+
+    test('consecutive challenges have different nonces', () async {
+      final service = LocalQrService(clock: () => issuedAt);
+
+      final p1 = await service.createDynamicChallenge(
+        walletId: 'wallet-1',
+        cardId: 'card-1',
+      );
+      final p2 = await service.createDynamicChallenge(
+        walletId: 'wallet-1',
+        cardId: 'card-1',
+      );
+
+      expect(p1.dynamicChallenge, isNot(equals(p2.dynamicChallenge)));
+    });
+
+    test('tampered nonce invalidates signature', () async {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = await service.createDynamicChallenge(
+        walletId: 'wallet-1',
+        cardId: 'card-1',
+      );
+
+      final tampered = QrChallengePayload(
+        type: payload.type,
+        version: payload.version,
+        walletId: payload.walletId,
+        cardId: payload.cardId,
+        dynamicChallenge: 'AAAAAAAAAAAAAAAAAAAAAA==',
+        timestamp: payload.timestamp,
+        signature: payload.signature,
+      );
+
+      expect(await service.verifyDynamicChallenge(tampered), isFalse);
+    });
+
+    test('tampered walletId invalidates signature', () async {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = await service.createDynamicChallenge(
+        walletId: 'wallet-1',
+        cardId: 'card-1',
+      );
+
+      final tampered = QrChallengePayload(
+        type: payload.type,
+        version: payload.version,
+        walletId: 'wallet-attacker',
+        cardId: payload.cardId,
+        dynamicChallenge: payload.dynamicChallenge,
+        timestamp: payload.timestamp,
+        signature: payload.signature,
+      );
+
+      expect(await service.verifyDynamicChallenge(tampered), isFalse);
+    });
+
+    test('clock skew within tolerance is accepted', () async {
+      final clientService = LocalQrService(
+        clock: () => issuedAt.add(const Duration(seconds: 8)),
+      );
+      final businessService = LocalQrService(clock: () => issuedAt);
+
+      final payload = await clientService.createDynamicChallenge(
+        walletId: 'wallet-1',
+        cardId: 'card-1',
+      );
+
+      expect(await businessService.verifyDynamicChallenge(payload), isTrue);
+    });
+
+    test('clock skew beyond tolerance is rejected', () async {
+      final clientService = LocalQrService(
+        clock: () => issuedAt.add(const Duration(seconds: 15)),
+      );
+      final businessService = LocalQrService(clock: () => issuedAt);
+
+      final payload = await clientService.createDynamicChallenge(
+        walletId: 'wallet-1',
+        cardId: 'card-1',
+      );
+
+      expect(await businessService.verifyDynamicChallenge(payload), isFalse);
+    });
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/drift_repositories.dart';
 import '../../data/repositories/repository_interfaces.dart';
+import '../../domain/entities/license_status.dart';
 import '../../domain/entities/subscription_card.dart';
 import '../../domain/entities/loyalty_card.dart';
 import '../../domain/value_objects/card_status.dart';
@@ -74,7 +75,7 @@ class BusinessSubscriptionActions {
 
   final Ref _ref;
 
-  Future<void> createSubscription({
+  Future<String?> createSubscription({
     required String businessId,
     required String customerId,
     required SubscriptionType type,
@@ -84,7 +85,7 @@ class BusinessSubscriptionActions {
     int? remainingUses,
     String? notes,
   }) async {
-    await _ensureCanCreateCard(businessId);
+    final license = await _ensureCanCreateCard(businessId);
     final repository = _ref.read(cardRepositoryProvider);
     final subscription = SubscriptionCard(
       businessId: businessId,
@@ -105,9 +106,10 @@ class BusinessSubscriptionActions {
     _ref.invalidate(customerSubscriptionsProvider(customerId));
     _ref.invalidate(businessSubscriptionCardsProvider(businessId));
     _ref.invalidate(businessCardCountProvider(businessId));
+    return _expiryWarning(license);
   }
 
-  Future<void> createLoyaltyCard({
+  Future<String?> createLoyaltyCard({
     required String businessId,
     required String customerId,
     required String name,
@@ -116,7 +118,7 @@ class BusinessSubscriptionActions {
     int? pointsPerScan,
     int? challengeWindowDays,
   }) async {
-    await _ensureCanCreateCard(businessId);
+    final license = await _ensureCanCreateCard(businessId);
     final repository = _ref.read(cardRepositoryProvider);
     final card = LoyaltyCard(
       businessId: businessId,
@@ -144,6 +146,7 @@ class BusinessSubscriptionActions {
     _ref.invalidate(customerLoyaltyCardsProvider(customerId));
     _ref.invalidate(loyaltyCardByIdProvider(card.cardId));
     _ref.invalidate(businessCardCountProvider(businessId));
+    return _expiryWarning(license);
   }
 
   Future<LoyaltyCard?> addDeliveryStamp(String loyaltyCardId) async {
@@ -216,10 +219,10 @@ class BusinessSubscriptionActions {
     return updated;
   }
 
-  Future<void> _ensureCanCreateCard(String businessId) async {
+  Future<LicenseStatus?> _ensureCanCreateCard(String businessId) async {
     final count = await _ref.read(businessCardCountProvider(businessId).future);
     if (count < 10) {
-      return;
+      return null;
     }
 
     final license = await _ref.read(
@@ -230,6 +233,14 @@ class BusinessSubscriptionActions {
         'Free limit reached. Insert the licensed USB-C stick to create more cards.',
       );
     }
+    return license;
+  }
+
+  String? _expiryWarning(LicenseStatus? license) {
+    if (license == null || !license.isExpiringSoon) return null;
+    final days = license.daysUntilExpiry!;
+    if (days <= 1) return 'License expires tomorrow! Renew to avoid interruptions.';
+    return 'License expires in $days days. Renew to avoid interruptions.';
   }
 
   static String _newSubscriptionId() {

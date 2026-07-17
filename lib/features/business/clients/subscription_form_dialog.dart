@@ -193,7 +193,7 @@ class _SubscriptionFormDialogState
     });
 
     try {
-      await ref
+      final warning = await ref
           .read(businessSubscriptionActionsProvider)
           .createSubscription(
             businessId: widget.customer.businessId,
@@ -208,6 +208,15 @@ class _SubscriptionFormDialogState
 
       if (!mounted) {
         return;
+      }
+      if (warning != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(warning),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 6),
+          ),
+        );
       }
       Navigator.of(context).pop();
     } on LicenseRequiredException {

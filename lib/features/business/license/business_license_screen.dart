@@ -136,6 +136,30 @@ class _LicenseStatusCard extends StatelessWidget {
               const SizedBox(height: 12),
               Text('License: ${status.licenseId}', textAlign: TextAlign.center),
             ],
+            if (status.validUntil != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Valid until: ${status.validUntil}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: status.isExpiringSoon ? Colors.orange : null,
+                  fontWeight: status.isExpiringSoon ? FontWeight.bold : null,
+                ),
+              ),
+            ],
+            if (status.daysUntilExpiry != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                status.daysUntilExpiry! <= 1
+                    ? 'Expires tomorrow!'
+                    : '${status.daysUntilExpiry} days remaining',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: status.isExpiringSoon ? Colors.orange : null,
+                  fontWeight: status.isExpiringSoon ? FontWeight.bold : null,
+                ),
+              ),
+            ],
             if (status.path != null) ...[
               const SizedBox(height: 6),
               Text(status.path!, textAlign: TextAlign.center),
@@ -172,10 +196,12 @@ class _LicensePresentation {
 
   factory _LicensePresentation.fromStatus(LicenseStatus status) {
     return switch (status.state) {
-      LicenseState.active => const _LicensePresentation(
-        title: 'Active Lifetime License',
+      LicenseState.active => _LicensePresentation(
+        title: (status.isLifetime ?? true)
+            ? 'Active Lifetime License'
+            : 'Active License',
         icon: Icons.verified,
-        color: Colors.green,
+        color: status.isExpiringSoon ? Colors.orange : Colors.green,
       ),
       LicenseState.invalid => const _LicensePresentation(
         title: 'Invalid License',
