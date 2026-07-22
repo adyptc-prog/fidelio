@@ -172,9 +172,15 @@ class _BusinessCreateLoyaltyScreenState
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _thresholdController,
-                      decoration: const InputDecoration(
-                        labelText: 'Reward Threshold',
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: _thresholdLabel(_programType),
+                        helperText:
+                            'After this many entries, the next one will be '
+                            'the bonus entry. Once the bonus is redeemed, '
+                            'the card is fully used and a new one must be '
+                            'created.',
+                        helperMaxLines: 3,
+                        border: const OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
                       validator: _positiveNomber,
@@ -273,6 +279,15 @@ String _programTypeLabel(LoyaltyProgramType type) {
     LoyaltyProgramType.points => 'Points per Visit',
     LoyaltyProgramType.visitChallenge => 'Visit Challenge',
     LoyaltyProgramType.delivery => 'Delivery',
+  };
+}
+
+String _thresholdLabel(LoyaltyProgramType type) {
+  return switch (type) {
+    LoyaltyProgramType.stamps => 'Number of stamps before bonus entry',
+    LoyaltyProgramType.points => 'Number of points before bonus entry',
+    LoyaltyProgramType.visitChallenge => 'Number of visits before bonus entry',
+    LoyaltyProgramType.delivery => 'Number of deliveries before bonus entry',
   };
 }
 

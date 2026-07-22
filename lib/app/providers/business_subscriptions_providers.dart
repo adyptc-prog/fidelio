@@ -155,27 +155,14 @@ class BusinessSubscriptionActions {
     if (card == null || card.programType != LoyaltyProgramType.delivery) {
       return card;
     }
-    if (card.currentStamps >= card.rewardThreshold) {
+    if (card.isCompleted || card.currentStamps >= card.rewardThreshold) {
       return card;
     }
 
-    final updated = LoyaltyCard(
-      businessId: card.businessId,
-      cardId: card.cardId,
-      customerId: card.customerId,
-      name: card.name,
-      createdAt: card.createdAt,
-      status: card.status,
-      currentStamps: card.currentStamps + 1,
-      rewardThreshold: card.rewardThreshold,
-      programType: card.programType,
-      pointsPerScan: card.pointsPerScan,
-      challengeWindowDays: card.challengeWindowDays,
-      challengeStartedAt: card.challengeStartedAt,
-      validUntil: card.validUntil,
-      dynamicChallenge: card.dynamicChallenge,
-      challengeTimestamp: card.challengeTimestamp,
-      challengeSignature: card.challengeSignature,
+    final newStamps = card.currentStamps + 1;
+    final updated = card.copyWith(
+      currentStamps: newStamps,
+      isBonusPending: newStamps >= card.rewardThreshold,
     );
 
     await repository.saveLoyaltyCard(updated);
@@ -190,33 +177,44 @@ class BusinessSubscriptionActions {
     if (card == null || card.programType != LoyaltyProgramType.delivery) {
       return card;
     }
-    if (card.currentStamps < card.rewardThreshold) {
+    if (card.isCompleted || card.currentStamps < card.rewardThreshold) {
       return card;
     }
 
-    final updated = LoyaltyCard(
-      businessId: card.businessId,
-      cardId: card.cardId,
-      customerId: card.customerId,
-      name: card.name,
-      createdAt: card.createdAt,
-      status: card.status,
-      currentStamps: card.currentStamps - card.rewardThreshold,
-      rewardThreshold: card.rewardThreshold,
-      programType: card.programType,
-      pointsPerScan: card.pointsPerScan,
-      challengeWindowDays: card.challengeWindowDays,
-      challengeStartedAt: card.challengeStartedAt,
-      validUntil: card.validUntil,
-      dynamicChallenge: card.dynamicChallenge,
-      challengeTimestamp: card.challengeTimestamp,
-      challengeSignature: card.challengeSignature,
-    );
+    final updated = card.copyWith(isBonusPending: false, isCompleted: true);
 
     await repository.saveLoyaltyCard(updated);
     _ref.invalidate(businessLoyaltyCardsProvider(updated.businessId));
     _ref.invalidate(loyaltyCardByIdProvider(updated.cardId));
     return updated;
+  }
+
+  Future<void> deleteLoyaltyCard(String loyaltyCardId) async {
+    final repository = _ref.read(cardRepositoryProvider);
+    final card = await repository.getLoyaltyCard(loyaltyCardId);
+    await repository.deleteLoyaltyCard(loyaltyCardId);
+    _ref.invalidate(loyaltyCardByIdProvider(loyaltyCardId));
+    if (card != null) {
+      _ref.invalidate(businessLoyaltyCardsProvider(card.businessId));
+      _ref.invalidate(customerLoyaltyCardsProvider(card.customerId));
+      _ref.invalidate(businessCardCountProvider(card.businessId));
+    }
+  }
+
+  Future<void> deleteSubscription(String subscriptionId) async {
+    final repository = _ref.read(cardRepositoryProvider);
+    final subscription = await repository.getSubscriptionCard(subscriptionId);
+    await repository.deleteSubscriptionCard(subscriptionId);
+    _ref.invalidate(subscriptionByIdProvider(subscriptionId));
+    if (subscription != null) {
+      _ref.invalidate(
+        businessSubscriptionCardsProvider(subscription.businessId),
+      );
+      _ref.invalidate(
+        customerSubscriptionsProvider(subscription.customerId),
+      );
+      _ref.invalidate(businessCardCountProvider(subscription.businessId));
+    }
   }
 
   Future<LicenseStatus?> _ensureCanCreateCard(String businessId) async {

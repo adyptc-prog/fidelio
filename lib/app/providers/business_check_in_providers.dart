@@ -31,16 +31,18 @@ final businessCheckInControllerProvider = Provider<BusinessCheckInController>((
   return BusinessCheckInController(ref);
 });
 
+enum _ProgressOutcome { normal, thresholdReached, bonusConsumed }
+
 class _LoyaltyProgressUpdate {
   const _LoyaltyProgressUpdate({
     required this.value,
     required this.challengeStartedAt,
-    this.rewardEarned = false,
+    this.outcome = _ProgressOutcome.normal,
   });
 
   final int value;
   final DateTime? challengeStartedAt;
-  final bool rewardEarned;
+  final _ProgressOutcome outcome;
 }
 
 class CheckInScanResult {
@@ -199,24 +201,19 @@ class BusinessCheckInController {
       );
       await _saveDynamicEvent(payload, business.businessId, 'valid');
       await cardRepository.saveLoyaltyCard(
-        LoyaltyCard(
-          businessId: validLoyaltyCard.businessId,
-          cardId: validLoyaltyCard.cardId,
-          customerId: validLoyaltyCard.customerId,
-          name: validLoyaltyCard.name,
-          createdAt: validLoyaltyCard.createdAt,
-          status: validLoyaltyCard.status,
+        validLoyaltyCard.copyWith(
           currentStamps: updatedProgress.value,
-          rewardThreshold: validLoyaltyCard.rewardThreshold,
-          programType: validLoyaltyCard.programType,
-          pointsPerScan: validLoyaltyCard.pointsPerScan,
-          challengeWindowDays: validLoyaltyCard.challengeWindowDays,
           challengeStartedAt: updatedProgress.challengeStartedAt,
-          validUntil: validLoyaltyCard.validUntil,
           linkedWalletId: validLoyaltyCard.linkedWalletId ?? payload.walletId,
           dynamicChallenge: payload.dynamicChallenge,
           challengeTimestamp: payload.timestamp,
           challengeSignature: payload.signature,
+          isBonusPending:
+              updatedProgress.outcome == _ProgressOutcome.thresholdReached,
+          isCompleted:
+              updatedProgress.outcome == _ProgressOutcome.bonusConsumed
+              ? true
+              : validLoyaltyCard.isCompleted,
         ),
       );
       _ref.invalidate(
@@ -229,9 +226,11 @@ class BusinessCheckInController {
 
       return CheckInScanResult(
         isValid: true,
-        message: updatedProgress.rewardEarned
-            ? 'reward_earned'
-            : 'Validated successfully',
+        message: switch (updatedProgress.outcome) {
+          _ProgressOutcome.thresholdReached => 'threshold_reached',
+          _ProgressOutcome.bonusConsumed => 'bonus_entry',
+          _ProgressOutcome.normal => 'Validated successfully',
+        },
       );
     });
 
@@ -255,22 +254,40 @@ class BusinessCheckInController {
   }
 
   _LoyaltyProgressUpdate _stampProgress(LoyaltyCard card) {
+    if (card.isBonusPending) {
+      return _LoyaltyProgressUpdate(
+        value: card.currentStamps + 1,
+        challengeStartedAt: card.challengeStartedAt,
+        outcome: _ProgressOutcome.bonusConsumed,
+      );
+    }
     final newValue = card.currentStamps + 1;
     final earned = newValue >= card.rewardThreshold;
     return _LoyaltyProgressUpdate(
-      value: earned ? newValue - card.rewardThreshold : newValue,
-      rewardEarned: earned,
+      value: newValue,
       challengeStartedAt: card.challengeStartedAt,
+      outcome: earned
+          ? _ProgressOutcome.thresholdReached
+          : _ProgressOutcome.normal,
     );
   }
 
   _LoyaltyProgressUpdate _pointsProgress(LoyaltyCard card) {
+    if (card.isBonusPending) {
+      return _LoyaltyProgressUpdate(
+        value: card.currentStamps + (card.pointsPerScan ?? 10),
+        challengeStartedAt: card.challengeStartedAt,
+        outcome: _ProgressOutcome.bonusConsumed,
+      );
+    }
     final newValue = card.currentStamps + (card.pointsPerScan ?? 10);
     final earned = newValue >= card.rewardThreshold;
     return _LoyaltyProgressUpdate(
-      value: earned ? newValue - card.rewardThreshold : newValue,
-      rewardEarned: earned,
+      value: newValue,
       challengeStartedAt: card.challengeStartedAt,
+      outcome: earned
+          ? _ProgressOutcome.thresholdReached
+          : _ProgressOutcome.normal,
     );
   }
 
@@ -278,6 +295,14 @@ class BusinessCheckInController {
     LoyaltyCard card,
     DateTime scanTime,
   ) {
+    if (card.isBonusPending) {
+      return _LoyaltyProgressUpdate(
+        value: card.currentStamps + 1,
+        challengeStartedAt: card.challengeStartedAt,
+        outcome: _ProgressOutcome.bonusConsumed,
+      );
+    }
+
     final windowDays = card.challengeWindowDays ?? 30;
     final startedAt = card.challengeStartedAt ?? scanTime;
     final expiresAt = startedAt.add(Duration(days: windowDays));
@@ -288,9 +313,11 @@ class BusinessCheckInController {
     final newValue = card.currentStamps + 1;
     final earned = newValue >= card.rewardThreshold;
     return _LoyaltyProgressUpdate(
-      value: earned ? 0 : newValue,
-      rewardEarned: earned,
-      challengeStartedAt: earned ? null : startedAt,
+      value: newValue,
+      challengeStartedAt: startedAt,
+      outcome: earned
+          ? _ProgressOutcome.thresholdReached
+          : _ProgressOutcome.normal,
     );
   }
 
@@ -339,6 +366,9 @@ class BusinessCheckInController {
   String? _invalidLoyaltyReason(LoyaltyCard? card, String businessId) {
     if (card == null || card.businessId != businessId) {
       return 'unknown';
+    }
+    if (card.isCompleted) {
+      return 'card_completed';
     }
     if (card.status == CardStatus.suspended) {
       return 'suspended';

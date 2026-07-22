@@ -405,21 +405,30 @@ void main() {
         db,
       ).getLoyaltyCard('loyalty-delivery-1');
       expect(updated?.currentStamps, 5);
+      expect(updated?.isBonusPending, isTrue);
       expect(
-        find.text('Stamp added. Progress: 5/5. Reward available.'),
+        find.text(
+          'Stamp added. Progress: 5/5. All entries reached! The next entry will be the bonus one.',
+        ),
         findsOneWidget,
       );
 
-      await tester.tap(find.text('Redeem Reward'));
+      await tester.tap(find.text('Redeem Bonus Entry'));
       await tester.pumpAndSettle();
-      expect(find.text('Redeem reward?'), findsOneWidget);
+      expect(find.text('Redeem bonus entry?'), findsOneWidget);
       await tester.tap(find.text('Redeem'));
       await tester.pumpAndSettle();
 
       final redeemed = await DriftCardRepository(
         db,
       ).getLoyaltyCard('loyalty-delivery-1');
-      expect(redeemed?.currentStamps, 0);
+      expect(redeemed?.isCompleted, isTrue);
+      expect(
+        find.text(
+          'This card has been fully used. Create a new card for this client.',
+        ),
+        findsOneWidget,
+      );
     },
   );
 

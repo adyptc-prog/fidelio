@@ -15,6 +15,7 @@ class AppDatabase implements LocalDatabaseService, QueryExecutorUser {
 
   final QueryExecutor _executor;
   bool _opened = false;
+  Future<void>? _openFuture;
 
   @override
   int get schemaVersion => 1;
@@ -26,30 +27,42 @@ class AppDatabase implements LocalDatabaseService, QueryExecutorUser {
   ) async {}
 
   @override
-  Future<void> open() async {
+  Future<void> open() {
     if (_opened) {
-      return;
+      return Future.value();
     }
-    await _executor.ensureOpen(this);
-    for (final statement in _schemaStatements) {
-      await _executor.runCustom(statement);
-    }
-    for (final migration in _columnMigrationStatements) {
-      if (!await _columnExists(_executor, migration.table, migration.column)) {
-        await _executor.runCustom(migration.statement);
+    return _openFuture ??= _performOpen();
+  }
+
+  Future<void> _performOpen() async {
+    try {
+      await _executor.ensureOpen(this);
+      for (final statement in _schemaStatements) {
+        await _executor.runCustom(statement);
       }
+      for (final migration in _columnMigrationStatements) {
+        if (!await _columnExists(
+          _executor,
+          migration.table,
+          migration.column,
+        )) {
+          await _executor.runCustom(migration.statement);
+        }
+      }
+      for (final statement in _postMigrationStatements) {
+        await _executor.runCustom(statement);
+      }
+      for (final statement in _dataRepairStatements) {
+        await _executor.runCustom(statement);
+      }
+      for (final statement in _indexStatements) {
+        await _executor.runCustom(statement);
+      }
+      await _executor.runCustom('PRAGMA user_version = $schemaVersion');
+      _opened = true;
+    } finally {
+      _openFuture = null;
     }
-    for (final statement in _postMigrationStatements) {
-      await _executor.runCustom(statement);
-    }
-    for (final statement in _dataRepairStatements) {
-      await _executor.runCustom(statement);
-    }
-    for (final statement in _indexStatements) {
-      await _executor.runCustom(statement);
-    }
-    await _executor.runCustom('PRAGMA user_version = $schemaVersion');
-    _opened = true;
   }
 
   @override
@@ -547,6 +560,18 @@ const _columnMigrationStatements = [
     table: 'loyalty_cards',
     column: 'linked_wallet_id',
     statement: 'ALTER TABLE loyalty_cards ADD COLUMN linked_wallet_id TEXT',
+  ),
+  _ColumnMigrationStatement(
+    table: 'loyalty_cards',
+    column: 'is_bonus_pending',
+    statement:
+        'ALTER TABLE loyalty_cards ADD COLUMN is_bonus_pending INTEGER NOT NULL DEFAULT 0',
+  ),
+  _ColumnMigrationStatement(
+    table: 'loyalty_cards',
+    column: 'is_completed',
+    statement:
+        'ALTER TABLE loyalty_cards ADD COLUMN is_completed INTEGER NOT NULL DEFAULT 0',
   ),
 ];
 

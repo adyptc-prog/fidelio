@@ -146,15 +146,25 @@ class _ScanResultPresentation {
   final IconData icon;
 
   factory _ScanResultPresentation.fromResult(CheckInScanResult result) {
-    if (result.isValid) {
-      return const _ScanResultPresentation(
-        title: 'Access Validated',
-        description: 'Check-in recorded. The membership was updated.',
-        icon: Icons.check_circle,
-      );
-    }
-
     return switch (result.message) {
+      'threshold_reached' => const _ScanResultPresentation(
+        title: 'All Entries Reached!',
+        description:
+            'All regular entries were used. The next entry will be the bonus one.',
+        icon: Icons.celebration,
+      ),
+      'bonus_entry' => const _ScanResultPresentation(
+        title: 'This Entry Is Bonus!',
+        description:
+            'Bonus entry redeemed. This card is now fully used; create a new card for further visits.',
+        icon: Icons.stars,
+      ),
+      'card_completed' => const _ScanResultPresentation(
+        title: 'Card Fully Used',
+        description:
+            'All entries, including the bonus, were already used. Create a new card for this client.',
+        icon: Icons.block,
+      ),
       'invalid QR' => const _ScanResultPresentation(
         title: 'Invalid or Expired NFC',
         description: 'Ask the client to prepare a fresh NFC access code.',
@@ -186,23 +196,23 @@ class _ScanResultPresentation {
         description: 'The card is suspended and cannot be validated.',
         icon: Icons.pause_circle,
       ),
-      'reward_earned' => const _ScanResultPresentation(
-        title: 'Reward Earned!',
-        description:
-            'The loyalty threshold was reached. Progress has been reset.',
-        icon: Icons.stars,
-      ),
       'unknown' => const _ScanResultPresentation(
         title: 'Unknown Card',
         description:
             'The NFC data does not match an active membership for this business.',
         icon: Icons.help,
       ),
-      _ => _ScanResultPresentation(
-        title: 'NFC Rejected',
-        description: result.message,
-        icon: Icons.error,
-      ),
+      _ => result.isValid
+          ? const _ScanResultPresentation(
+              title: 'Access Validated',
+              description: 'Check-in recorded. The membership was updated.',
+              icon: Icons.check_circle,
+            )
+          : _ScanResultPresentation(
+              title: 'NFC Rejected',
+              description: result.message,
+              icon: Icons.error,
+            ),
     };
   }
 }

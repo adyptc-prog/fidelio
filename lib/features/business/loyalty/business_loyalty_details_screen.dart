@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../app/providers/business_profile_providers.dart';
@@ -66,6 +67,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
   bool _isWritingNfc = false;
   bool _isAddingStamp = false;
   bool _isRedeemingReward = false;
+  bool _isDeleting = false;
   String? _nfcMessage;
 
   @override
@@ -88,7 +90,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
                 const SizedBox(height: 8),
                 _InfoLine(
                   label: 'Status',
-                  value: _statusLabel(widget.card.status),
+                  value: _statusValue(widget.card),
                 ),
                 _InfoLine(
                   label: _progressLabel(widget.card.programType),
@@ -109,10 +111,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
                   ),
                 _InfoLine(
                   label: 'Reward',
-                  value:
-                      widget.card.currentStamps >= widget.card.rewardThreshold
-                      ? 'available'
-                      : _remainingValue(widget.card),
+                  value: _rewardValue(widget.card),
                 ),
                 _InfoLine(label: 'Card ID', value: widget.card.cardId),
               ],
@@ -124,26 +123,47 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FilledButton.icon(
-                icon: const Icon(Icons.add_task),
-                label: Text(_isAddingStamp ? 'Updating...' : 'Add Stamp'),
-                onPressed:
-                    (_isAddingStamp ||
-                        widget.card.currentStamps >=
-                            widget.card.rewardThreshold)
-                    ? null
-                    : _addDeliveryStamp,
-              ),
-              if (widget.card.currentStamps >= widget.card.rewardThreshold) ...[
-                const SizedBox(height: 8),
-                FilledButton.tonalIcon(
-                  icon: const Icon(Icons.redeem),
-                  label: Text(
-                    _isRedeemingReward ? 'Redeeming...' : 'Redeem Reward',
-                  ),
-                  onPressed: _isRedeemingReward ? null : _redeemDeliveryReward,
+              if (widget.card.isCompleted)
+                const Text(
+                  'This card has been fully used. Create a new card for this client.',
+                  textAlign: TextAlign.center,
+                )
+              else ...[
+                FilledButton.icon(
+                  icon: const Icon(Icons.add_task),
+                  label: Text(_isAddingStamp ? 'Updating...' : 'Add Stamp'),
+                  onPressed:
+                      (_isAddingStamp ||
+                          widget.card.currentStamps >=
+                              widget.card.rewardThreshold)
+                      ? null
+                      : _addDeliveryStamp,
                 ),
+                if (widget.card.currentStamps >=
+                    widget.card.rewardThreshold) ...[
+                  const SizedBox(height: 8),
+                  FilledButton.tonalIcon(
+                    icon: const Icon(Icons.stars),
+                    label: Text(
+                      _isRedeemingReward
+                          ? 'Redeeming...'
+                          : 'Redeem Bonus Entry',
+                    ),
+                    onPressed: _isRedeemingReward
+                        ? null
+                        : _redeemDeliveryReward,
+                  ),
+                ],
               ],
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.delete_outline),
+                label: Text(_isDeleting ? 'Deleting...' : 'Delete Card'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                onPressed: _isDeleting ? null : _deleteCard,
+              ),
             ],
           )
         else ...[
@@ -159,6 +179,15 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
               _isWritingNfc ? 'Preparing NFC...' : 'Send to Client by NFC',
             ),
             onPressed: _isWritingNfc ? null : () => _writeNfc(qrData!),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            icon: const Icon(Icons.delete_outline),
+            label: Text(_isDeleting ? 'Deleting...' : 'Delete Card'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: _isDeleting ? null : _deleteCard,
           ),
           if (_nfcMessage != null) ...[
             const SizedBox(height: 8),
@@ -210,8 +239,8 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
       if (!mounted || updated == null) {
         return;
       }
-      final rewardMessage = updated.currentStamps >= updated.rewardThreshold
-          ? ' Reward available.'
+      final rewardMessage = updated.isBonusPending
+          ? ' All entries reached! The next entry will be the bonus one.'
           : '';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -238,9 +267,9 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Redeem reward?'),
+        title: const Text('Redeem bonus entry?'),
         content: const Text(
-          'This will use one reward and subtract the reward threshold from this delivery card.',
+          'This entry is bonus. After redeeming it, this card will be fully used and cannot be used again — a new card will be needed for this client.',
         ),
         actions: [
           TextButton(
@@ -267,9 +296,9 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text(
-            'Reward redeemed. Progress: ${updated.currentStamps}/${updated.rewardThreshold}.',
+            'This entry is bonus! Card is now fully used — create a new card for this client.',
           ),
         ),
       );
@@ -283,6 +312,52 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
     } finally {
       if (mounted) {
         setState(() => _isRedeemingReward = false);
+      }
+    }
+  }
+
+  Future<void> _deleteCard() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete card?'),
+        content: const Text(
+          'Are you sure you want to permanently delete this card from the local database?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() => _isDeleting = true);
+    try {
+      await ref
+          .read(businessSubscriptionActionsProvider)
+          .deleteLoyaltyCard(widget.card.cardId);
+      if (mounted) {
+        context.pop();
+      }
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete card: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
       }
     }
   }
@@ -324,6 +399,23 @@ String _progressLabel(LoyaltyProgramType type) {
 
 String _progressValue(LoyaltyCard card) {
   return '${card.currentStamps}/${card.rewardThreshold}';
+}
+
+String _statusValue(LoyaltyCard card) {
+  if (card.isCompleted) {
+    return 'fully used';
+  }
+  return _statusLabel(card.status);
+}
+
+String _rewardValue(LoyaltyCard card) {
+  if (card.isCompleted) {
+    return 'fully used — create a new card';
+  }
+  if (card.isBonusPending) {
+    return 'next entry is bonus';
+  }
+  return _remainingValue(card);
 }
 
 String _remainingValue(LoyaltyCard card) {

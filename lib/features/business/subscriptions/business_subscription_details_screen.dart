@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../app/providers/business_profile_providers.dart';
@@ -75,6 +76,7 @@ class _SubscriptionDetails extends ConsumerStatefulWidget {
 class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
   bool _showQr = false;
   bool _isWritingNfc = false;
+  bool _isDeleting = false;
   String? _nfcMessage;
 
   @override
@@ -144,6 +146,15 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
           ),
           onPressed: _isWritingNfc ? null : () => _writeNfc(qrData),
         ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.delete_outline),
+          label: Text(_isDeleting ? 'Deleting...' : 'Delete Membership'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Theme.of(context).colorScheme.error,
+          ),
+          onPressed: _isDeleting ? null : _deleteSubscription,
+        ),
         if (_nfcMessage != null) ...[
           const SizedBox(height: 8),
           Text(_nfcMessage!, textAlign: TextAlign.center),
@@ -173,6 +184,52 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
         ],
       ],
     );
+  }
+
+  Future<void> _deleteSubscription() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete membership?'),
+        content: const Text(
+          'Are you sure you want to permanently delete this membership from the local database?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    setState(() => _isDeleting = true);
+    try {
+      await ref
+          .read(businessSubscriptionActionsProvider)
+          .deleteSubscription(widget.subscription.cardId);
+      if (mounted) {
+        context.pop();
+      }
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete membership: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
+      }
+    }
   }
 
   Future<void> _writeNfc(String rawPayload) async {

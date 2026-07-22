@@ -373,8 +373,8 @@ INSERT OR REPLACE INTO loyalty_cards
 (card_id, business_id, customer_id, name, created_at, status, current_stamps,
  reward_threshold, program_type, points_per_scan, challenge_window_days,
  challenge_started_at, valid_until, linked_wallet_id, dynamic_challenge,
- challenge_timestamp, challenge_signature)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ challenge_timestamp, challenge_signature, is_bonus_pending, is_completed)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''',
       [
         card.cardId,
@@ -394,6 +394,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         card.dynamicChallenge,
         _nullableDate(card.challengeTimestamp),
         card.challengeSignature,
+        _bool(card.isBonusPending),
+        _bool(card.isCompleted),
       ],
     );
   }
@@ -820,6 +822,8 @@ LoyaltyCard _loyaltyFromRow(Map<String, Object?> row) {
     dynamicChallenge: row['dynamic_challenge'] as String?,
     challengeTimestamp: _readNullableDate(row['challenge_timestamp']),
     challengeSignature: row['challenge_signature'] as String?,
+    isBonusPending: _readBool(row['is_bonus_pending']),
+    isCompleted: _readBool(row['is_completed']),
   );
 }
 
