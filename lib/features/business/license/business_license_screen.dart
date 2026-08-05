@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/business_profile_providers.dart';
@@ -56,6 +57,21 @@ class BusinessLicenseScreen extends ConsumerWidget {
                   leading: const Icon(Icons.store),
                   title: const Text('Business ID'),
                   subtitle: Text(business.businessId),
+                  trailing: IconButton(
+                    tooltip: 'Copy Business ID',
+                    icon: const Icon(Icons.copy),
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: business.businessId),
+                      );
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Business ID copied.')),
+                      );
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -77,7 +93,10 @@ class BusinessLicenseScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'Put fidelio_license.json on the USB-C stick at /Fidelio/fidelio_license.json. The app checks the stick automatically.',
+                    'Buy a license at voltacademy.app/fidelio.html using the Business ID above, '
+                    'then use "Select USB License" to import the downloaded fidelio_license.json '
+                    '(from your phone storage or a USB-C stick). Placing it on a stick at '
+                    '/Fidelio/fidelio_license.json also lets the app pick it up automatically.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -173,7 +192,7 @@ class _LicenseStatusCard extends StatelessWidget {
             const SizedBox(height: 8),
             FilledButton.icon(
               icon: const Icon(Icons.folder_open),
-              label: const Text('Select USB License'),
+              label: const Text('Select License File'),
               onPressed: onSelect,
             ),
           ],
