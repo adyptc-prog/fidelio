@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/business_check_in_providers.dart';
 import '../../../app/providers/nfc_access_providers.dart';
+import '../../../app/providers/scan_feedback_providers.dart';
 import '../../../presentation/layouts/section_shell.dart';
 
 class BusinessNfcScannerScreen extends ConsumerStatefulWidget {
@@ -70,25 +73,29 @@ class _BusinessNfcScannerScreenState
         return;
       }
       setState(() => _lastResult = result);
+      unawaited(
+        ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
+      );
     } on FormatException catch (error) {
       if (!mounted) {
         return;
       }
-      setState(
-        () => _lastResult = CheckInScanResult(
-          isValid: false,
-          message: error.message,
-        ),
+      final result = CheckInScanResult(isValid: false, message: error.message);
+      setState(() => _lastResult = result);
+      unawaited(
+        ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
       );
     } on Object catch (error) {
       if (!mounted) {
         return;
       }
-      setState(
-        () => _lastResult = CheckInScanResult(
-          isValid: false,
-          message: error.toString(),
-        ),
+      final result = CheckInScanResult(
+        isValid: false,
+        message: error.toString(),
+      );
+      setState(() => _lastResult = result);
+      unawaited(
+        ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
       );
     } finally {
       if (mounted) {
@@ -186,6 +193,11 @@ class _ScanResultPresentation {
         description: 'The card exists, but its validity period has passed.',
         icon: Icons.event_busy,
       ),
+      'not_active_yet' => const _ScanResultPresentation(
+        title: 'Card Not Active Yet',
+        description: 'This card becomes valid on a future date.',
+        icon: Icons.hourglass_top,
+      ),
       'no entries' => const _ScanResultPresentation(
         title: 'No Entries Available',
         description: 'The membership has no remaining entries.',
@@ -202,17 +214,18 @@ class _ScanResultPresentation {
             'The NFC data does not match an active membership for this business.',
         icon: Icons.help,
       ),
-      _ => result.isValid
-          ? const _ScanResultPresentation(
-              title: 'Access Validated',
-              description: 'Check-in recorded. The membership was updated.',
-              icon: Icons.check_circle,
-            )
-          : _ScanResultPresentation(
-              title: 'NFC Rejected',
-              description: result.message,
-              icon: Icons.error,
-            ),
+      _ =>
+        result.isValid
+            ? const _ScanResultPresentation(
+                title: 'Access Validated',
+                description: 'Check-in recorded. The membership was updated.',
+                icon: Icons.check_circle,
+              )
+            : _ScanResultPresentation(
+                title: 'NFC Rejected',
+                description: result.message,
+                icon: Icons.error,
+              ),
     };
   }
 }

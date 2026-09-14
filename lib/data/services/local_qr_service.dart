@@ -70,7 +70,7 @@ class LocalQrService implements QrService {
       clientId: loyaltyCard.customerId,
       subscriptionId: loyaltyCard.cardId,
       cardTitle: loyaltyCard.name,
-      validFrom: loyaltyCard.createdAt,
+      validFrom: loyaltyCard.startsAt ?? loyaltyCard.createdAt,
       validUntil:
           loyaltyCard.validUntil ??
           loyaltyCard.createdAt.add(const Duration(days: 3650)),

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../app/providers/business_check_in_providers.dart';
+import '../../../app/providers/scan_feedback_providers.dart';
 import '../../../presentation/layouts/section_shell.dart';
 
 class BusinessScannerScreen extends ConsumerStatefulWidget {
@@ -79,6 +82,11 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
 
     _handlingScan = true;
     await _scannerController.stop();
+    unawaited(
+      ref
+          .read(scanFeedbackControllerProvider)
+          .play(ScanFeedbackEvent.scanDetected),
+    );
 
     try {
       final result = await ref
@@ -88,25 +96,26 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
         return;
       }
       setState(() => _lastResult = result);
+      unawaited(
+        ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
+      );
     } on FormatException catch (error) {
       if (!mounted) {
         return;
       }
-      setState(
-        () => _lastResult = CheckInScanResult(
-          isValid: false,
-          message: error.message,
-        ),
+      final result = CheckInScanResult(isValid: false, message: error.message);
+      setState(() => _lastResult = result);
+      unawaited(
+        ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
       );
     } on Object {
       if (!mounted) {
         return;
       }
-      setState(
-        () => _lastResult = const CheckInScanResult(
-          isValid: false,
-          message: 'unknown',
-        ),
+      const result = CheckInScanResult(isValid: false, message: 'unknown');
+      setState(() => _lastResult = result);
+      unawaited(
+        ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
       );
     }
   }
@@ -227,6 +236,11 @@ class _ScanResultPresentation {
         description: 'The card exists, but its validity period has passed.',
         icon: Icons.event_busy,
       ),
+      'not_active_yet' => const _ScanResultPresentation(
+        title: 'Card Not Active Yet',
+        description: 'This card becomes valid on a future date.',
+        icon: Icons.hourglass_top,
+      ),
       'no entries' => const _ScanResultPresentation(
         title: 'No Entries Available',
         description: 'The membership has no remaining entries.',
@@ -243,17 +257,18 @@ class _ScanResultPresentation {
             'The code does not match an active membership for this business.',
         icon: Icons.help,
       ),
-      _ => result.isValid
-          ? const _ScanResultPresentation(
-              title: 'Access Validated',
-              description: 'Check-in recorded. The membership was updated.',
-              icon: Icons.check_circle,
-            )
-          : _ScanResultPresentation(
-              title: 'Scan Rejected',
-              description: result.message,
-              icon: Icons.error,
-            ),
+      _ =>
+        result.isValid
+            ? const _ScanResultPresentation(
+                title: 'Access Validated',
+                description: 'Check-in recorded. The membership was updated.',
+                icon: Icons.check_circle,
+              )
+            : _ScanResultPresentation(
+                title: 'Scan Rejected',
+                description: result.message,
+                icon: Icons.error,
+              ),
     };
   }
 }

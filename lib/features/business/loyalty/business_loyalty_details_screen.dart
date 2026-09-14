@@ -88,10 +88,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                _InfoLine(
-                  label: 'Status',
-                  value: _statusValue(widget.card),
-                ),
+                _InfoLine(label: 'Status', value: _statusValue(widget.card)),
                 _InfoLine(
                   label: _progressLabel(widget.card.programType),
                   value: _progressValue(widget.card),
@@ -109,14 +106,29 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
                         '${widget.card.challengeWindowDays ?? 30} days'
                         '${_challengeEndsAt(widget.card)}',
                   ),
+                _InfoLine(label: 'Reward', value: _rewardValue(widget.card)),
                 _InfoLine(
-                  label: 'Reward',
-                  value: _rewardValue(widget.card),
+                  label: 'Valid From',
+                  value: _formatDate(
+                    widget.card.startsAt ?? widget.card.createdAt,
+                  ),
+                ),
+                _InfoLine(
+                  label: 'Valid Until',
+                  value: widget.card.validUntil == null
+                      ? 'No expiration'
+                      : _formatDate(widget.card.validUntil!),
                 ),
                 _InfoLine(label: 'Card ID', value: widget.card.cardId),
               ],
             ),
           ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.edit_calendar),
+          label: const Text('Edit Validity'),
+          onPressed: _isDeleting ? null : _editValidity,
         ),
         const SizedBox(height: 12),
         if (isDelivery)
@@ -362,6 +374,42 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
     }
   }
 
+  Future<void> _editValidity() async {
+    final result = await showDialog<_ValidityEditResult>(
+      context: context,
+      builder: (context) => _ValidityEditDialog(
+        startsAt: widget.card.startsAt ?? widget.card.createdAt,
+        validUntil: widget.card.validUntil,
+      ),
+    );
+    if (result == null || !mounted) {
+      return;
+    }
+
+    try {
+      await ref
+          .read(businessSubscriptionActionsProvider)
+          .updateLoyaltyCardValidity(
+            loyaltyCardId: widget.card.cardId,
+            startsAt: result.startsAt,
+            validUntil: result.validUntil,
+          );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Validity dates updated.')));
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update validity: $error')),
+      );
+    }
+  }
+
   Future<void> _writeNfc(String rawPayload) async {
     setState(() {
       _isWritingNfc = true;
@@ -478,4 +526,130 @@ String _statusLabel(CardStatus status) {
     CardStatus.draft => 'draft',
     CardStatus.revoked => 'revoked',
   };
+}
+
+class _ValidityEditResult {
+  const _ValidityEditResult({required this.startsAt, this.validUntil});
+
+  final DateTime startsAt;
+  final DateTime? validUntil;
+}
+
+class _ValidityEditDialog extends StatefulWidget {
+  const _ValidityEditDialog({required this.startsAt, this.validUntil});
+
+  final DateTime startsAt;
+  final DateTime? validUntil;
+
+  @override
+  State<_ValidityEditDialog> createState() => _ValidityEditDialogState();
+}
+
+class _ValidityEditDialogState extends State<_ValidityEditDialog> {
+  final _startsAtController = TextEditingController();
+  final _validUntilController = TextEditingController();
+  late DateTime _startsAt;
+  DateTime? _validUntil;
+
+  @override
+  void initState() {
+    super.initState();
+    _startsAt = widget.startsAt;
+    _validUntil = widget.validUntil;
+    _syncDateControllers();
+  }
+
+  @override
+  void dispose() {
+    _startsAtController.dispose();
+    _validUntilController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Validity'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _startsAtController,
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: 'Valid From',
+                border: OutlineInputBorder(),
+                suffixIcon: Icon(Icons.calendar_today),
+              ),
+              onTap: () => _pickDate(isStart: true),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _validUntilController,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Valid Until (optional)',
+                border: const OutlineInputBorder(),
+                suffixIcon: _validUntil == null
+                    ? const Icon(Icons.calendar_today)
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => setState(() {
+                          _validUntil = null;
+                          _syncDateControllers();
+                        }),
+                      ),
+              ),
+              onTap: () => _pickDate(isStart: false),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            _ValidityEditResult(startsAt: _startsAt, validUntil: _validUntil),
+          ),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      if (isStart) {
+        _startsAt = picked;
+        if (_validUntil != null && _validUntil!.isBefore(_startsAt)) {
+          _validUntil = _startsAt;
+        }
+      } else {
+        _validUntil = picked;
+      }
+      _syncDateControllers();
+    });
+  }
+
+  void _syncDateControllers() {
+    _startsAtController.text = _formatDate(_startsAt);
+    _validUntilController.text = _validUntil == null
+        ? 'No expiration'
+        : _formatDate(_validUntil!);
+  }
 }

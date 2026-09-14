@@ -132,6 +132,8 @@ void main() {
     );
 
     expect(await customers.listCustomers('business-1'), hasLength(1));
+    expect((await customers.getCustomer('customer-1'))?.rewardsEarned, 0);
+    expect((await customers.getCustomer('customer-1'))?.lastVisitAt, isNull);
 
     await customers.saveCustomer(
       CustomerRecord(
@@ -143,6 +145,11 @@ void main() {
         phone: '0712345678',
         email: 'ana@example.com',
         notes: 'local note',
+        birthMonth: 5,
+        birthDay: 13,
+        lastBirthdayPromptYear: 2025,
+        rewardsEarned: 4,
+        lastVisitAt: now,
       ),
     );
 
@@ -151,6 +158,12 @@ void main() {
     expect(updated?.phone, '0712345678');
     expect(updated?.email, 'ana@example.com');
     expect(updated?.notes, 'local note');
+    expect(updated?.birthMonth, 5);
+    expect(updated?.birthDay, 13);
+    expect(updated?.lastBirthdayPromptYear, 2025);
+    expect(updated?.lastVisitAt, now);
+    expect(updated?.hasBirthday, isTrue);
+    expect(updated?.rewardsEarned, 4);
 
     await customers.saveCustomer(
       CustomerRecord(
@@ -238,6 +251,8 @@ void main() {
         programType: LoyaltyProgramType.visitChallenge,
         challengeWindowDays: 7,
         challengeStartedAt: now,
+        startsAt: now,
+        validUntil: now.add(const Duration(days: 90)),
         linkedWalletId: 'wallet-2',
       ),
     );
@@ -265,6 +280,11 @@ void main() {
     );
     expect((await cards.getLoyaltyCard('loyalty-1'))?.challengeWindowDays, 7);
     expect((await cards.getLoyaltyCard('loyalty-1'))?.challengeStartedAt, now);
+    expect((await cards.getLoyaltyCard('loyalty-1'))?.startsAt, now);
+    expect(
+      (await cards.getLoyaltyCard('loyalty-1'))?.validUntil,
+      now.add(const Duration(days: 90)),
+    );
     expect(
       (await cards.getLoyaltyCard('loyalty-1'))?.linkedWalletId,
       'wallet-2',

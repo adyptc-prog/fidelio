@@ -9,6 +9,7 @@ import 'package:fidelio/data/local_db/app_database.dart';
 import 'package:fidelio/data/repositories/drift_repositories.dart';
 import 'package:fidelio/data/services/local_qr_service.dart';
 import 'package:fidelio/domain/entities/business_profile.dart';
+import 'package:fidelio/domain/entities/customer_record.dart';
 import 'package:fidelio/domain/entities/loyalty_card.dart';
 import 'package:fidelio/domain/entities/subscription_card.dart';
 import 'package:fidelio/domain/value_objects/card_status.dart';
@@ -489,6 +490,205 @@ void main() {
       expect(updated?.currentStamps, 1);
       expect(updated?.challengeStartedAt, scanTime);
     });
+
+    test('rejects a loyalty card scanned after its validity date', () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final scanTime = now.add(const Duration(days: 5));
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          qrServiceProvider.overrideWithValue(
+            LocalQrService(clock: () => scanTime),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await _seedBusinessAndSubscription(db, now);
+      await DriftCardRepository(db).saveLoyaltyCard(
+        LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-expired',
+          customerId: 'customer-1',
+          name: 'Coffee Loyalty',
+          createdAt: now,
+          status: CardStatus.active,
+          currentStamps: 2,
+          rewardThreshold: 8,
+          startsAt: now,
+          // The validity check compares against the real wall clock, not
+          // the injected QR clock, so this must be a real past date.
+          validUntil: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+      );
+
+      final rawPayload = await _dynamicRawPayload(
+        service: LocalQrService(clock: () => scanTime),
+        walletId: 'wallet-local',
+        cardId: 'loyalty-expired',
+      );
+
+      final result = await container
+          .read(businessCheckInControllerProvider)
+          .processRawPayload(rawPayload);
+
+      expect(result.isValid, isFalse);
+      expect(result.message, 'expired');
+      expect(
+        (await DriftCardRepository(
+          db,
+        ).getLoyaltyCard('loyalty-expired'))?.currentStamps,
+        2,
+      );
+    });
+
+    test('rejects a loyalty card scanned before its start date', () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          qrServiceProvider.overrideWithValue(LocalQrService(clock: () => now)),
+        ],
+      );
+      addTearDown(container.dispose);
+      await _seedBusinessAndSubscription(db, now);
+      await DriftCardRepository(db).saveLoyaltyCard(
+        LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-future',
+          customerId: 'customer-1',
+          name: 'Coffee Loyalty',
+          createdAt: now,
+          status: CardStatus.active,
+          currentStamps: 0,
+          rewardThreshold: 8,
+          // The validity check compares against the real wall clock, not
+          // the injected QR clock, so this must be a real future date.
+          startsAt: DateTime.now().add(const Duration(days: 3)),
+        ),
+      );
+
+      final rawPayload = await _dynamicRawPayload(
+        service: LocalQrService(clock: () => now),
+        walletId: 'wallet-local',
+        cardId: 'loyalty-future',
+      );
+
+      final result = await container
+          .read(businessCheckInControllerProvider)
+          .processRawPayload(rawPayload);
+
+      expect(result.isValid, isFalse);
+      expect(result.message, 'not_active_yet');
+      expect(
+        (await DriftCardRepository(
+          db,
+        ).getLoyaltyCard('loyalty-future'))?.currentStamps,
+        0,
+      );
+    });
+
+    test(
+      'consuming the bonus entry increments the customer reward count',
+      () async {
+        final db = AppDatabase.memory();
+        addTearDown(db.close);
+        final container = ProviderContainer(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            qrServiceProvider.overrideWithValue(
+              LocalQrService(clock: () => now),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await _seedBusinessAndSubscription(db, now);
+        await DriftCustomerRepository(db).saveCustomer(
+          CustomerRecord(
+            customerId: 'customer-1',
+            businessId: 'business-1',
+            createdAt: now,
+            updatedAt: now,
+            displayName: 'Ana Client',
+          ),
+        );
+        await DriftCardRepository(db).saveLoyaltyCard(
+          LoyaltyCard(
+            businessId: 'business-1',
+            cardId: 'loyalty-1',
+            customerId: 'customer-1',
+            name: 'Coffee Loyalty',
+            createdAt: now,
+            status: CardStatus.active,
+            currentStamps: 8,
+            rewardThreshold: 8,
+            isBonusPending: true,
+          ),
+        );
+
+        final rawPayload = await _dynamicRawPayload(
+          service: LocalQrService(clock: () => now),
+          walletId: 'wallet-local',
+          cardId: 'loyalty-1',
+        );
+
+        final result = await container
+            .read(businessCheckInControllerProvider)
+            .processRawPayload(rawPayload);
+
+        expect(result.isValid, isTrue);
+        expect(result.message, 'bonus_entry');
+        final customer = await DriftCustomerRepository(
+          db,
+        ).getCustomer('customer-1');
+        expect(customer?.rewardsEarned, 1);
+        expect(customer?.lastVisitAt, isNotNull);
+      },
+    );
+
+    test(
+      'a valid subscription check-in stamps the customer last-visit date',
+      () async {
+        final db = AppDatabase.memory();
+        addTearDown(db.close);
+        final container = ProviderContainer(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            qrServiceProvider.overrideWithValue(
+              LocalQrService(clock: () => now),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        await _seedBusinessAndSubscription(db, now);
+        await DriftCustomerRepository(db).saveCustomer(
+          CustomerRecord(
+            customerId: 'customer-1',
+            businessId: 'business-1',
+            createdAt: now,
+            updatedAt: now,
+            displayName: 'Ana Client',
+          ),
+        );
+
+        final rawPayload = await _dynamicRawPayload(
+          service: LocalQrService(clock: () => now),
+          walletId: 'wallet-local',
+          cardId: 'subscription-1',
+        );
+
+        final result = await container
+            .read(businessCheckInControllerProvider)
+            .processRawPayload(rawPayload);
+
+        expect(result.isValid, isTrue);
+        final customer = await DriftCustomerRepository(
+          db,
+        ).getCustomer('customer-1');
+        expect(customer?.lastVisitAt, isNotNull);
+      },
+    );
   });
 }
 

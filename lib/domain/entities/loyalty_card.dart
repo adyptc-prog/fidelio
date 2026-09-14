@@ -15,6 +15,7 @@ class LoyaltyCard {
     this.pointsPerScan,
     this.challengeWindowDays,
     this.challengeStartedAt,
+    this.startsAt,
     this.validUntil,
     this.linkedWalletId,
     this.dynamicChallenge,
@@ -36,6 +37,13 @@ class LoyaltyCard {
   final int? pointsPerScan;
   final int? challengeWindowDays;
   final DateTime? challengeStartedAt;
+
+  /// The date from which the card is valid. Defaults to [createdAt] when a
+  /// card is issued, but can be set to a future date.
+  final DateTime? startsAt;
+
+  /// The date after which the card can no longer be used. Null means no
+  /// expiration date is set.
   final DateTime? validUntil;
   final String? linkedWalletId;
   final String? dynamicChallenge;

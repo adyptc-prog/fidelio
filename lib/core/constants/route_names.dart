@@ -7,6 +7,7 @@ class RouteNames {
   static const businessSetup = '/business/setup';
   static const businessScanHistory = '/business/scan-history';
   static const businessClients = '/business/clients';
+  static const businessLeaderboard = '/business/leaderboard';
   static const businessClientDetails = '/business/clients/:customerId';
   static const businessSubscriptionDetails =
       '/business/subscriptions/:subscriptionId';

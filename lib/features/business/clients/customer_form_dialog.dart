@@ -30,6 +30,8 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _notesController = TextEditingController();
+  int? _birthMonth;
+  int? _birthDay;
 
   @override
   void initState() {
@@ -42,6 +44,8 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
     _phoneController.text = customer.phone ?? '';
     _emailController.text = customer.email ?? '';
     _notesController.text = customer.notes ?? '';
+    _birthMonth = customer.birthMonth;
+    _birthDay = customer.birthDay;
   }
 
   @override
@@ -102,6 +106,26 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
                   minLines: 2,
                   maxLines: 4,
                 ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: _pickBirthday,
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Birthday optional',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: _birthMonth == null
+                          ? const Icon(Icons.cake_outlined)
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () => setState(() {
+                                _birthMonth = null;
+                                _birthDay = null;
+                              }),
+                            ),
+                    ),
+                    child: Text(_birthdayLabel()),
+                  ),
+                ),
               ],
             ),
           ),
@@ -115,6 +139,50 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
+  }
+
+  Future<void> _pickBirthday() async {
+    // A leap year so Feb 29 remains selectable; only month/day are kept.
+    const neutralYear = 2000;
+    final initialDate = _birthMonth == null
+        ? DateTime(neutralYear)
+        : DateTime(neutralYear, _birthMonth!, _birthDay!);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(neutralYear),
+      lastDate: DateTime(neutralYear, 12, 31),
+      initialDatePickerMode: DatePickerMode.day,
+      helpText: 'Select birthday (year is ignored)',
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      _birthMonth = picked.month;
+      _birthDay = picked.day;
+    });
+  }
+
+  String _birthdayLabel() {
+    if (_birthMonth == null || _birthDay == null) {
+      return 'Not set';
+    }
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${months[_birthMonth! - 1]} $_birthDay';
   }
 
   String? _nameOrPhone() {
@@ -147,6 +215,8 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
             phone: _phoneController.text,
             email: _emailController.text,
             notes: _notesController.text,
+            birthMonth: _birthMonth,
+            birthDay: _birthDay,
           );
     } on CustomerValidationException catch (error) {
       if (!mounted) {

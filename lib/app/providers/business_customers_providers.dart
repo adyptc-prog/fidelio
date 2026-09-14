@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/drift_repositories.dart';
 import '../../data/repositories/repository_interfaces.dart';
+import '../../data/services/birthday_notification_service.dart';
 import '../../domain/entities/customer_record.dart';
 import '../../domain/value_objects/customer_status.dart';
 import 'app_settings_providers.dart';
@@ -10,6 +13,11 @@ import 'business_profile_providers.dart';
 final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
   return DriftCustomerRepository(ref.watch(appDatabaseProvider));
 });
+
+final birthdayNotificationServiceProvider =
+    Provider<BirthdayNotificationService>((ref) {
+      return BirthdayNotificationService();
+    });
 
 final businessCustomersControllerProvider =
     AsyncNotifierProvider<BusinessCustomersController, BusinessCustomersState>(
@@ -38,6 +46,7 @@ class BusinessCustomersController
   @override
   Future<BusinessCustomersState> build() async {
     final customers = await _loadCustomers('');
+    unawaited(_rescheduleBirthdayReminders(customers));
     return BusinessCustomersState(customers: customers);
   }
 
@@ -55,6 +64,8 @@ class BusinessCustomersController
     String? phone,
     String? email,
     String? notes,
+    int? birthMonth,
+    int? birthDay,
   }) async {
     final normalizedName = displayName.trim();
     final normalizedPhone = phone?.trim() ?? '';
@@ -82,9 +93,31 @@ class BusinessCustomersController
       email: _nullableText(email),
       notes: _nullableText(notes),
       linkedWalletId: existing?.linkedWalletId,
+      birthMonth: birthMonth,
+      birthDay: birthDay,
+      lastBirthdayPromptYear: existing?.lastBirthdayPromptYear,
+      rewardsEarned: existing?.rewardsEarned ?? 0,
+      lastVisitAt: existing?.lastVisitAt,
     );
 
     await repository.saveCustomer(customer);
+    await _refresh();
+    unawaited(
+      _rescheduleBirthdayReminders(state.valueOrNull?.customers ?? const []),
+    );
+  }
+
+  /// Marks that the birthday reward prompt was shown (accepted or declined)
+  /// for [customerId] this calendar year, so it is not shown again.
+  Future<void> markBirthdayPrompted(String customerId) async {
+    final repository = ref.read(customerRepositoryProvider);
+    final existing = await repository.getCustomer(customerId);
+    if (existing == null) {
+      return;
+    }
+    await repository.saveCustomer(
+      existing.copyWith(lastBirthdayPromptYear: DateTime.now().year),
+    );
     await _refresh();
   }
 
@@ -104,6 +137,14 @@ class BusinessCustomersController
       final customers = await _loadCustomers(query);
       return BusinessCustomersState(customers: customers, query: query);
     });
+  }
+
+  Future<void> _rescheduleBirthdayReminders(
+    List<CustomerRecord> customers,
+  ) async {
+    await ref
+        .read(birthdayNotificationServiceProvider)
+        .scheduleBirthdayReminders(customers);
   }
 
   Future<List<CustomerRecord>> _loadCustomers(String query) async {
@@ -131,6 +172,35 @@ class BusinessCustomersController
     final trimmed = value?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
   }
+}
+
+/// Records that [customerId] just redeemed a loyalty reward (a card reaching
+/// its threshold and the bonus being consumed), incrementing their reward
+/// count and refreshing the customer list so their rank updates everywhere
+/// it's displayed. Safe to call from any provider via its [Ref].
+Future<void> recordCustomerRewardEarned(Ref ref, String customerId) async {
+  final repository = ref.read(customerRepositoryProvider);
+  final existing = await repository.getCustomer(customerId);
+  if (existing == null) {
+    return;
+  }
+  await repository.saveCustomer(
+    existing.copyWith(rewardsEarned: existing.rewardsEarned + 1),
+  );
+  ref.invalidate(businessCustomersControllerProvider);
+}
+
+/// Records that [customerId] just visited (a validated QR/NFC check-in, or a
+/// delivery stamp added), stamping their last-visit date. Safe to call from
+/// any provider via its [Ref].
+Future<void> recordCustomerVisit(Ref ref, String customerId) async {
+  final repository = ref.read(customerRepositoryProvider);
+  final existing = await repository.getCustomer(customerId);
+  if (existing == null) {
+    return;
+  }
+  await repository.saveCustomer(existing.copyWith(lastVisitAt: DateTime.now()));
+  ref.invalidate(businessCustomersControllerProvider);
 }
 
 class CustomerValidationException implements Exception {

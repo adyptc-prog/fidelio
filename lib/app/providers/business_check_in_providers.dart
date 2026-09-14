@@ -8,10 +8,11 @@ import '../../data/repositories/repository_interfaces.dart';
 import '../../domain/entities/check_in_event.dart';
 import '../../domain/entities/loyalty_card.dart';
 import '../../domain/entities/subscription_card.dart';
+import '../../domain/services/loyalty_progress.dart';
 import '../../domain/value_objects/qr_challenge_payload.dart';
 import '../../domain/value_objects/card_status.dart';
-import '../../domain/value_objects/loyalty_program_type.dart';
 import 'app_settings_providers.dart';
+import 'business_customers_providers.dart';
 import 'business_profile_providers.dart';
 import 'business_subscriptions_providers.dart';
 import 'qr_providers.dart';
@@ -30,20 +31,6 @@ final businessCheckInControllerProvider = Provider<BusinessCheckInController>((
 ) {
   return BusinessCheckInController(ref);
 });
-
-enum _ProgressOutcome { normal, thresholdReached, bonusConsumed }
-
-class _LoyaltyProgressUpdate {
-  const _LoyaltyProgressUpdate({
-    required this.value,
-    required this.challengeStartedAt,
-    this.outcome = _ProgressOutcome.normal,
-  });
-
-  final int value;
-  final DateTime? challengeStartedAt;
-  final _ProgressOutcome outcome;
-}
 
 class CheckInScanResult {
   const CheckInScanResult({
@@ -158,6 +145,7 @@ class BusinessCheckInController {
           );
           _ref.invalidate(subscriptionByIdProvider(validSubscription.cardId));
         }
+        await recordCustomerVisit(_ref, validSubscription.customerId);
         return CheckInScanResult(
           isValid: true,
           message: 'Validated successfully',
@@ -195,7 +183,7 @@ class BusinessCheckInController {
         );
       }
 
-      final updatedProgress = _updatedLoyaltyProgress(
+      final updatedProgress = advanceLoyaltyProgress(
         validLoyaltyCard,
         payload.timestamp,
       );
@@ -209,9 +197,10 @@ class BusinessCheckInController {
           challengeTimestamp: payload.timestamp,
           challengeSignature: payload.signature,
           isBonusPending:
-              updatedProgress.outcome == _ProgressOutcome.thresholdReached,
+              updatedProgress.outcome ==
+              LoyaltyProgressOutcome.thresholdReached,
           isCompleted:
-              updatedProgress.outcome == _ProgressOutcome.bonusConsumed
+              updatedProgress.outcome == LoyaltyProgressOutcome.bonusConsumed
               ? true
               : validLoyaltyCard.isCompleted,
         ),
@@ -223,102 +212,23 @@ class BusinessCheckInController {
         customerLoyaltyCardsProvider(validLoyaltyCard.customerId),
       );
       _ref.invalidate(loyaltyCardByIdProvider(validLoyaltyCard.cardId));
+      await recordCustomerVisit(_ref, validLoyaltyCard.customerId);
+      if (updatedProgress.outcome == LoyaltyProgressOutcome.bonusConsumed) {
+        await recordCustomerRewardEarned(_ref, validLoyaltyCard.customerId);
+      }
 
       return CheckInScanResult(
         isValid: true,
         message: switch (updatedProgress.outcome) {
-          _ProgressOutcome.thresholdReached => 'threshold_reached',
-          _ProgressOutcome.bonusConsumed => 'bonus_entry',
-          _ProgressOutcome.normal => 'Validated successfully',
+          LoyaltyProgressOutcome.thresholdReached => 'threshold_reached',
+          LoyaltyProgressOutcome.bonusConsumed => 'bonus_entry',
+          LoyaltyProgressOutcome.normal => 'Validated successfully',
         },
       );
     });
 
     _ref.invalidate(businessCheckInsProvider(business.businessId));
     return result;
-  }
-
-  _LoyaltyProgressUpdate _updatedLoyaltyProgress(
-    LoyaltyCard card,
-    DateTime scanTime,
-  ) {
-    return switch (card.programType) {
-      LoyaltyProgramType.stamps ||
-      LoyaltyProgramType.delivery => _stampProgress(card),
-      LoyaltyProgramType.points => _pointsProgress(card),
-      LoyaltyProgramType.visitChallenge => _visitChallengeProgress(
-        card,
-        scanTime,
-      ),
-    };
-  }
-
-  _LoyaltyProgressUpdate _stampProgress(LoyaltyCard card) {
-    if (card.isBonusPending) {
-      return _LoyaltyProgressUpdate(
-        value: card.currentStamps + 1,
-        challengeStartedAt: card.challengeStartedAt,
-        outcome: _ProgressOutcome.bonusConsumed,
-      );
-    }
-    final newValue = card.currentStamps + 1;
-    final earned = newValue >= card.rewardThreshold;
-    return _LoyaltyProgressUpdate(
-      value: newValue,
-      challengeStartedAt: card.challengeStartedAt,
-      outcome: earned
-          ? _ProgressOutcome.thresholdReached
-          : _ProgressOutcome.normal,
-    );
-  }
-
-  _LoyaltyProgressUpdate _pointsProgress(LoyaltyCard card) {
-    if (card.isBonusPending) {
-      return _LoyaltyProgressUpdate(
-        value: card.currentStamps + (card.pointsPerScan ?? 10),
-        challengeStartedAt: card.challengeStartedAt,
-        outcome: _ProgressOutcome.bonusConsumed,
-      );
-    }
-    final newValue = card.currentStamps + (card.pointsPerScan ?? 10);
-    final earned = newValue >= card.rewardThreshold;
-    return _LoyaltyProgressUpdate(
-      value: newValue,
-      challengeStartedAt: card.challengeStartedAt,
-      outcome: earned
-          ? _ProgressOutcome.thresholdReached
-          : _ProgressOutcome.normal,
-    );
-  }
-
-  _LoyaltyProgressUpdate _visitChallengeProgress(
-    LoyaltyCard card,
-    DateTime scanTime,
-  ) {
-    if (card.isBonusPending) {
-      return _LoyaltyProgressUpdate(
-        value: card.currentStamps + 1,
-        challengeStartedAt: card.challengeStartedAt,
-        outcome: _ProgressOutcome.bonusConsumed,
-      );
-    }
-
-    final windowDays = card.challengeWindowDays ?? 30;
-    final startedAt = card.challengeStartedAt ?? scanTime;
-    final expiresAt = startedAt.add(Duration(days: windowDays));
-    if (scanTime.isAfter(expiresAt)) {
-      return _LoyaltyProgressUpdate(value: 1, challengeStartedAt: scanTime);
-    }
-
-    final newValue = card.currentStamps + 1;
-    final earned = newValue >= card.rewardThreshold;
-    return _LoyaltyProgressUpdate(
-      value: newValue,
-      challengeStartedAt: startedAt,
-      outcome: earned
-          ? _ProgressOutcome.thresholdReached
-          : _ProgressOutcome.normal,
-    );
   }
 
   Future<bool> _isReplay(QrChallengePayload payload, String businessId) async {
@@ -377,8 +287,12 @@ class BusinessCheckInController {
         card.status == CardStatus.revoked) {
       return 'unknown';
     }
-    if (card.validUntil != null && card.validUntil!.isBefore(DateTime.now())) {
+    final now = DateTime.now();
+    if (card.validUntil != null && card.validUntil!.isBefore(now)) {
       return 'expired';
+    }
+    if (card.startsAt != null && card.startsAt!.isAfter(now)) {
+      return 'not_active_yet';
     }
     if (card.status != CardStatus.active) {
       return 'unknown';

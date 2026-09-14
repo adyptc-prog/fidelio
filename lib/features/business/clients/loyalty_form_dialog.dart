@@ -31,8 +31,18 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
   final _thresholdController = TextEditingController(text: '8');
   final _pointsPerScanController = TextEditingController(text: '10');
   final _windowDaysController = TextEditingController(text: '30');
+  final _startsAtController = TextEditingController();
+  final _validUntilController = TextEditingController();
   LoyaltyProgramType _programType = LoyaltyProgramType.stamps;
+  DateTime _startsAt = DateTime.now();
+  DateTime? _validUntil;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncDateControllers();
+  }
 
   @override
   void dispose() {
@@ -40,6 +50,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
     _thresholdController.dispose();
     _pointsPerScanController.dispose();
     _windowDaysController.dispose();
+    _startsAtController.dispose();
+    _validUntilController.dispose();
     super.dispose();
   }
 
@@ -51,77 +63,111 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
         width: 420,
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Card Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: _required,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<LoyaltyProgramType>(
-                initialValue: _programType,
-                decoration: const InputDecoration(
-                  labelText: 'Loyalty Program Type',
-                  border: OutlineInputBorder(),
-                ),
-                items: LoyaltyProgramType.values
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(_programTypeLabel(type)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  if (value == null) {
-                    return;
-                  }
-                  setState(() {
-                    _programType = value;
-                    _thresholdController.text = _defaultThreshold(value);
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              if (_programType == LoyaltyProgramType.points) ...[
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 TextFormField(
-                  controller: _pointsPerScanController,
+                  controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Points awarded per scan',
+                    labelText: 'Card Name',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: _required,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<LoyaltyProgramType>(
+                  initialValue: _programType,
+                  decoration: const InputDecoration(
+                    labelText: 'Loyalty Program Type',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: LoyaltyProgramType.values
+                      .map(
+                        (type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(_programTypeLabel(type)),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _programType = value;
+                      _thresholdController.text = _defaultThreshold(value);
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                if (_programType == LoyaltyProgramType.points) ...[
+                  TextFormField(
+                    controller: _pointsPerScanController,
+                    decoration: const InputDecoration(
+                      labelText: 'Points awarded per scan',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: _positiveNomber,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (_programType == LoyaltyProgramType.visitChallenge) ...[
+                  TextFormField(
+                    controller: _windowDaysController,
+                    decoration: const InputDecoration(
+                      labelText: 'Challenge period in days',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    validator: _positiveNomber,
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                TextFormField(
+                  controller: _thresholdController,
+                  decoration: const InputDecoration(
+                    labelText: 'Reward Threshold',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
                   validator: _positiveNomber,
                 ),
                 const SizedBox(height: 12),
-              ],
-              if (_programType == LoyaltyProgramType.visitChallenge) ...[
                 TextFormField(
-                  controller: _windowDaysController,
+                  controller: _startsAtController,
+                  readOnly: true,
                   decoration: const InputDecoration(
-                    labelText: 'Challenge period in days',
+                    labelText: 'Valid From',
                     border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
                   ),
-                  keyboardType: TextInputType.number,
-                  validator: _positiveNomber,
+                  onTap: _isSaving ? null : () => _pickDate(isStart: true),
                 ),
                 const SizedBox(height: 12),
-              ],
-              TextFormField(
-                controller: _thresholdController,
-                decoration: const InputDecoration(
-                  labelText: 'Reward Threshold',
-                  border: OutlineInputBorder(),
+                TextFormField(
+                  controller: _validUntilController,
+                  readOnly: true,
+                  decoration: InputDecoration(
+                    labelText: 'Valid Until (optional)',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: _validUntil == null
+                        ? const Icon(Icons.calendar_today)
+                        : IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: _isSaving
+                                ? null
+                                : () => setState(() {
+                                    _validUntil = null;
+                                    _syncDateControllers();
+                                  }),
+                          ),
+                  ),
+                  onTap: _isSaving ? null : () => _pickDate(isStart: false),
                 ),
-                keyboardType: TextInputType.number,
-                validator: _positiveNomber,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -164,6 +210,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
                 _programType == LoyaltyProgramType.visitChallenge
                 ? int.parse(_windowDaysController.text)
                 : null,
+            startsAt: _startsAt,
+            validUntil: _validUntil,
           );
 
       if (!mounted) {
@@ -200,6 +248,37 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
     }
   }
 
+  Future<void> _pickDate({required bool isStart}) async {
+    final initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) {
+      return;
+    }
+    setState(() {
+      if (isStart) {
+        _startsAt = picked;
+        if (_validUntil != null && _validUntil!.isBefore(_startsAt)) {
+          _validUntil = _startsAt;
+        }
+      } else {
+        _validUntil = picked;
+      }
+      _syncDateControllers();
+    });
+  }
+
+  void _syncDateControllers() {
+    _startsAtController.text = _formatDate(_startsAt);
+    _validUntilController.text = _validUntil == null
+        ? 'No expiration'
+        : _formatDate(_validUntil!);
+  }
+
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Required field.';
@@ -214,6 +293,12 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
     }
     return null;
   }
+}
+
+String _formatDate(DateTime value) {
+  final month = value.month.toString().padLeft(2, '0');
+  final day = value.day.toString().padLeft(2, '0');
+  return '${value.year}-$month-$day';
 }
 
 String _programTypeLabel(LoyaltyProgramType type) {

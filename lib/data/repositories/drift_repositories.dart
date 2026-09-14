@@ -215,8 +215,9 @@ ORDER BY
       '''
 INSERT OR REPLACE INTO customer_records
 (customer_id, business_id, created_at, updated_at, display_name, status, phone,
- email, notes, linked_wallet_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ email, notes, linked_wallet_id, birth_month, birth_day, last_birthday_prompt_year,
+ rewards_earned, last_visit_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''',
       [
         customer.customerId,
@@ -229,6 +230,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         customer.email,
         customer.notes,
         customer.linkedWalletId,
+        customer.birthMonth,
+        customer.birthDay,
+        customer.lastBirthdayPromptYear,
+        customer.rewardsEarned,
+        _nullableDate(customer.lastVisitAt),
       ],
     );
   }
@@ -372,9 +378,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 INSERT OR REPLACE INTO loyalty_cards
 (card_id, business_id, customer_id, name, created_at, status, current_stamps,
  reward_threshold, program_type, points_per_scan, challenge_window_days,
- challenge_started_at, valid_until, linked_wallet_id, dynamic_challenge,
+ challenge_started_at, starts_at, valid_until, linked_wallet_id, dynamic_challenge,
  challenge_timestamp, challenge_signature, is_bonus_pending, is_completed)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''',
       [
         card.cardId,
@@ -389,6 +395,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         card.pointsPerScan,
         card.challengeWindowDays,
         _nullableDate(card.challengeStartedAt),
+        _nullableDate(card.startsAt),
         _nullableDate(card.validUntil),
         card.linkedWalletId,
         card.dynamicChallenge,
@@ -779,6 +786,11 @@ CustomerRecord _customerFromRow(Map<String, Object?> row) {
     email: row['email'] as String?,
     notes: row['notes'] as String?,
     linkedWalletId: row['linked_wallet_id'] as String?,
+    birthMonth: row['birth_month'] as int?,
+    birthDay: row['birth_day'] as int?,
+    lastBirthdayPromptYear: row['last_birthday_prompt_year'] as int?,
+    rewardsEarned: (row['rewards_earned'] as int?) ?? 0,
+    lastVisitAt: _readNullableDate(row['last_visit_at']),
   );
 }
 
@@ -817,6 +829,7 @@ LoyaltyCard _loyaltyFromRow(Map<String, Object?> row) {
     pointsPerScan: row['points_per_scan'] as int?,
     challengeWindowDays: row['challenge_window_days'] as int?,
     challengeStartedAt: _readNullableDate(row['challenge_started_at']),
+    startsAt: _readNullableDate(row['starts_at']),
     validUntil: _readNullableDate(row['valid_until']),
     linkedWalletId: row['linked_wallet_id'] as String?,
     dynamicChallenge: row['dynamic_challenge'] as String?,

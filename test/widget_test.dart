@@ -4,6 +4,7 @@ import 'package:fidelio/app/app.dart';
 import 'package:fidelio/app/providers/app_settings_providers.dart';
 import 'package:fidelio/app/providers/client_wallet_providers.dart';
 import 'package:fidelio/app/providers/license_providers.dart';
+import 'package:fidelio/core/constants/app_constants.dart';
 import 'package:fidelio/data/local_db/app_database.dart';
 import 'package:fidelio/data/repositories/drift_repositories.dart';
 import 'package:fidelio/domain/entities/app_settings.dart';
@@ -69,6 +70,11 @@ void main() {
   testWidgets('saved business mode with profile starts in dashboard', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final db = AppDatabase.memory();
     addTearDown(db.close);
 
@@ -96,6 +102,214 @@ void main() {
     expect(find.text('Recent Scans'), findsOneWidget);
     expect(find.text('Create Membership'), findsNothing);
     expect(find.text('Create Loyalty Card'), findsNothing);
+    expect(find.text(AppConstants.appVersionLabel), findsOneWidget);
+    expect(find.text(AppConstants.appTagline), findsOneWidget);
+    expect(find.text(AppConstants.appWebsite), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
+    expect(find.text('Leaderboard'), findsOneWidget);
+  });
+
+  testWidgets(
+    'business leaderboard orders customers by rank and shows visits',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+
+      await DriftAppSettingsRepository(db).saveSelectedMode(AppMode.business);
+      await DriftBusinessRepository(db).saveBusinessProfile(
+        BusinessProfile(
+          businessId: 'business-1',
+          displayName: 'Coffee Shop',
+          createdAt: DateTime.utc(2026, 5, 13),
+        ),
+      );
+      await DriftCustomerRepository(db).saveCustomer(
+        CustomerRecord(
+          customerId: 'customer-bronze',
+          businessId: 'business-1',
+          createdAt: DateTime.utc(2026, 5, 13),
+          updatedAt: DateTime.utc(2026, 5, 13),
+          displayName: 'Bronze Ana',
+          rewardsEarned: 1,
+        ),
+      );
+      await DriftCustomerRepository(db).saveCustomer(
+        CustomerRecord(
+          customerId: 'customer-vip',
+          businessId: 'business-1',
+          createdAt: DateTime.utc(2026, 5, 13),
+          updatedAt: DateTime.utc(2026, 5, 13),
+          displayName: 'VIP Radu',
+          rewardsEarned: 12,
+          lastVisitAt: DateTime.utc(2026, 6, 1),
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const LocalLoyaltyApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Leaderboard'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('VIP Radu'), findsOneWidget);
+      expect(find.text('Bronze Ana'), findsOneWidget);
+      expect(find.textContaining('2026-06-01'), findsOneWidget);
+      expect(find.text('Never visited'), findsOneWidget);
+
+      final vipOffset = tester.getTopLeft(find.text('VIP Radu')).dy;
+      final bronzeOffset = tester.getTopLeft(find.text('Bronze Ana')).dy;
+      expect(vipOffset, lessThan(bronzeOffset));
+    },
+  );
+
+  testWidgets(
+    'business dashboard prompts a birthday reward and grants a stamp',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final today = DateTime.now();
+
+      await DriftAppSettingsRepository(db).saveSelectedMode(AppMode.business);
+      await DriftBusinessRepository(db).saveBusinessProfile(
+        BusinessProfile(
+          businessId: 'business-1',
+          displayName: 'Coffee Shop',
+          createdAt: DateTime.utc(2026, 5, 13),
+        ),
+      );
+      await DriftCustomerRepository(db).saveCustomer(
+        CustomerRecord(
+          customerId: 'customer-1',
+          businessId: 'business-1',
+          createdAt: DateTime.utc(2026, 5, 13),
+          updatedAt: DateTime.utc(2026, 5, 13),
+          displayName: 'Ana Client',
+          birthMonth: today.month,
+          birthDay: today.day,
+        ),
+      );
+      await DriftCardRepository(db).saveLoyaltyCard(
+        LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-1',
+          customerId: 'customer-1',
+          name: 'Coffee Loyalty',
+          createdAt: DateTime.utc(2026, 5, 13),
+          status: CardStatus.active,
+          currentStamps: 2,
+          rewardThreshold: 8,
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+          child: const LocalLoyaltyApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Birthday Reward'), findsOneWidget);
+      expect(find.textContaining("Ana Client's birthday"), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Yes'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Happy Birthday, Ana Client!'), findsOneWidget);
+
+      final updatedCard = await DriftCardRepository(
+        db,
+      ).getLoyaltyCard('loyalty-1');
+      expect(updatedCard?.currentStamps, 3);
+
+      final updatedCustomer = await DriftCustomerRepository(
+        db,
+      ).getCustomer('customer-1');
+      expect(updatedCustomer?.lastBirthdayPromptYear, today.year);
+    },
+  );
+
+  testWidgets('declining a birthday reward does not change the loyalty card', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+    final today = DateTime.now();
+
+    await DriftAppSettingsRepository(db).saveSelectedMode(AppMode.business);
+    await DriftBusinessRepository(db).saveBusinessProfile(
+      BusinessProfile(
+        businessId: 'business-1',
+        displayName: 'Coffee Shop',
+        createdAt: DateTime.utc(2026, 5, 13),
+      ),
+    );
+    await DriftCustomerRepository(db).saveCustomer(
+      CustomerRecord(
+        customerId: 'customer-1',
+        businessId: 'business-1',
+        createdAt: DateTime.utc(2026, 5, 13),
+        updatedAt: DateTime.utc(2026, 5, 13),
+        displayName: 'Ana Client',
+        birthMonth: today.month,
+        birthDay: today.day,
+      ),
+    );
+    await DriftCardRepository(db).saveLoyaltyCard(
+      LoyaltyCard(
+        businessId: 'business-1',
+        cardId: 'loyalty-1',
+        customerId: 'customer-1',
+        name: 'Coffee Loyalty',
+        createdAt: DateTime.utc(2026, 5, 13),
+        status: CardStatus.active,
+        currentStamps: 2,
+        rewardThreshold: 8,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const LocalLoyaltyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Birthday Reward'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'No'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Birthday Reward'), findsNothing);
+    final updatedCard = await DriftCardRepository(
+      db,
+    ).getLoyaltyCard('loyalty-1');
+    expect(updatedCard?.currentStamps, 2);
+
+    final updatedCustomer = await DriftCustomerRepository(
+      db,
+    ).getCustomer('customer-1');
+    expect(updatedCustomer?.lastBirthdayPromptYear, today.year);
   });
 
   testWidgets(
@@ -352,85 +566,84 @@ void main() {
     expect(loyaltyCards.single.rewardThreshold, 5);
   });
 
-  testWidgets(
-    'business delivery loyalty details adds stamp without QR or NFC',
-    (tester) async {
-      final db = AppDatabase.memory();
-      addTearDown(db.close);
-      await _seedBusinessWithCustomer(db);
-      await DriftCardRepository(db).saveLoyaltyCard(
-        LoyaltyCard(
-          businessId: 'business-1',
-          cardId: 'loyalty-delivery-1',
-          customerId: 'customer-1',
-          name: 'Delivery Pizza',
-          createdAt: DateTime.utc(2026, 5, 19),
-          status: CardStatus.active,
-          currentStamps: 4,
-          rewardThreshold: 5,
-          programType: LoyaltyProgramType.delivery,
-        ),
-      );
+  testWidgets('business delivery loyalty details adds stamp without QR or NFC', (
+    tester,
+  ) async {
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+    await _seedBusinessWithCustomer(db);
+    await DriftCardRepository(db).saveLoyaltyCard(
+      LoyaltyCard(
+        businessId: 'business-1',
+        cardId: 'loyalty-delivery-1',
+        customerId: 'customer-1',
+        name: 'Delivery Pizza',
+        createdAt: DateTime.utc(2026, 5, 19),
+        status: CardStatus.active,
+        currentStamps: 4,
+        rewardThreshold: 5,
+        programType: LoyaltyProgramType.delivery,
+      ),
+    );
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            appDatabaseProvider.overrideWithValue(db),
-            clientWalletIdProvider.overrideWith(
-              (ref) async => _testClientWalletId,
-            ),
-          ],
-          child: const LocalLoyaltyApp(),
-        ),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          clientWalletIdProvider.overrideWith(
+            (ref) async => _testClientWalletId,
+          ),
+        ],
+        child: const LocalLoyaltyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.people));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Ana Client'));
-      await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView), const Offset(0, -500));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Delivery Pizza'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.people));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ana Client'));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -500));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delivery Pizza'));
+    await tester.pumpAndSettle();
 
-      expect(find.text('Send to Client by QR'), findsNothing);
-      expect(find.text('Send to Client by NFC'), findsNothing);
-      expect(find.text('Add Stamp'), findsOneWidget);
+    expect(find.text('Send to Client by QR'), findsNothing);
+    expect(find.text('Send to Client by NFC'), findsNothing);
+    expect(find.text('Add Stamp'), findsOneWidget);
 
-      await tester.tap(find.text('Add Stamp'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Add Stamp'));
+    await tester.pumpAndSettle();
 
-      final updated = await DriftCardRepository(
-        db,
-      ).getLoyaltyCard('loyalty-delivery-1');
-      expect(updated?.currentStamps, 5);
-      expect(updated?.isBonusPending, isTrue);
-      expect(
-        find.text(
-          'Stamp added. Progress: 5/5. All entries reached! The next entry will be the bonus one.',
-        ),
-        findsOneWidget,
-      );
+    final updated = await DriftCardRepository(
+      db,
+    ).getLoyaltyCard('loyalty-delivery-1');
+    expect(updated?.currentStamps, 5);
+    expect(updated?.isBonusPending, isTrue);
+    expect(
+      find.text(
+        'Stamp added. Progress: 5/5. All entries reached! The next entry will be the bonus one.',
+      ),
+      findsOneWidget,
+    );
 
-      await tester.tap(find.text('Redeem Bonus Entry'));
-      await tester.pumpAndSettle();
-      expect(find.text('Redeem bonus entry?'), findsOneWidget);
-      await tester.tap(find.text('Redeem'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Redeem Bonus Entry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Redeem bonus entry?'), findsOneWidget);
+    await tester.tap(find.text('Redeem'));
+    await tester.pumpAndSettle();
 
-      final redeemed = await DriftCardRepository(
-        db,
-      ).getLoyaltyCard('loyalty-delivery-1');
-      expect(redeemed?.isCompleted, isTrue);
-      expect(
-        find.text(
-          'This card has been fully used. Create a new card for this client.',
-        ),
-        findsOneWidget,
-      );
-    },
-  );
+    final redeemed = await DriftCardRepository(
+      db,
+    ).getLoyaltyCard('loyalty-delivery-1');
+    expect(redeemed?.isCompleted, isTrue);
+    expect(
+      find.text(
+        'This card has been fully used. Create a new card for this client.',
+      ),
+      findsOneWidget,
+    );
+  });
 
   testWidgets(
     'business membership save shows license message after free limit',
@@ -611,6 +824,43 @@ void main() {
     expect(settings.businessClientsViewMode, BusinessClientsViewMode.grid);
     expect(settings.zoomMode, AppZoomMode.large);
     expect(settings.darkMode, isTrue);
+  });
+
+  testWidgets('business clients list shows the customer rank', (tester) async {
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+    await DriftAppSettingsRepository(db).saveSelectedMode(AppMode.business);
+    await DriftBusinessRepository(db).saveBusinessProfile(
+      BusinessProfile(
+        businessId: 'business-1',
+        displayName: 'Coffee Shop',
+        createdAt: DateTime.utc(2026, 5, 13),
+      ),
+    );
+    await DriftCustomerRepository(db).saveCustomer(
+      CustomerRecord(
+        customerId: 'customer-1',
+        businessId: 'business-1',
+        createdAt: DateTime.utc(2026, 5, 13),
+        updatedAt: DateTime.utc(2026, 5, 13),
+        displayName: 'Ana Client',
+        rewardsEarned: 4,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const LocalLoyaltyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.people));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Silver'), findsOneWidget);
+    expect(find.byIcon(Icons.workspace_premium), findsOneWidget);
   });
 
   testWidgets('business clients use grid view setting', (tester) async {
@@ -867,10 +1117,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('License required'), findsNothing);
-      expect(
-        find.textContaining('License expires in 5 days'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('License expires in 5 days'), findsOneWidget);
       expect(
         await DriftCardRepository(db).listSubscriptionCards('business-1'),
         hasLength(11),

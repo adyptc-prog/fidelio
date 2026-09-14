@@ -7,6 +7,7 @@ import '../features/business/clients/business_client_details_screen.dart';
 import '../features/business/clients/business_clients_screen.dart';
 import '../features/business/dashboard/business_dashboard_screen.dart';
 import '../features/business/dashboard/business_scan_history_screen.dart';
+import '../features/business/leaderboard/business_leaderboard_screen.dart';
 import '../features/business/license/business_license_screen.dart';
 import '../features/business/loyalty/business_create_loyalty_screen.dart';
 import '../features/business/loyalty/business_loyalty_details_screen.dart';
@@ -77,6 +78,10 @@ GoRouter createAppRouter({
       GoRoute(
         path: RouteNames.businessClients,
         builder: (context, state) => const BusinessClientsScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.businessLeaderboard,
+        builder: (context, state) => const BusinessLeaderboardScreen(),
       ),
       GoRoute(
         path: RouteNames.businessClientDetails,

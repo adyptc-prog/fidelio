@@ -6,8 +6,10 @@ import '../../../app/providers/app_settings_providers.dart';
 import '../../../app/providers/business_customers_providers.dart';
 import '../../../domain/entities/app_settings.dart';
 import '../../../domain/entities/customer_record.dart';
+import '../../../domain/services/customer_rank_service.dart';
 import '../../../domain/value_objects/customer_status.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import '../../../presentation/widgets/customer_rank_badge.dart';
 import 'customer_form_dialog.dart';
 
 class BusinessClientsScreen extends ConsumerWidget {
@@ -71,6 +73,7 @@ String _customerSubtitle(CustomerRecord customer) {
     if (customer.phone != null) customer.phone!,
     if (customer.email != null) customer.email!,
     customer.status == CustomerStatus.active ? 'active' : 'inactive',
+    rankLabel(rankForRewards(customer.rewardsEarned)),
   ];
   return parts.join(' - ');
 }
@@ -122,7 +125,14 @@ class _CustomersList extends StatelessWidget {
             ),
             title: Text(customer.displayName),
             subtitle: Text(_customerSubtitle(customer)),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustomerRankBadge(rank: rankForRewards(customer.rewardsEarned)),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
             onTap: () =>
                 context.push('/business/clients/${customer.customerId}'),
           ),
@@ -170,10 +180,19 @@ class _CustomerGridCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  isActive ? Icons.person : Icons.person_off,
-                  color: Colors.white,
-                  size: 30,
+                Row(
+                  children: [
+                    Icon(
+                      isActive ? Icons.person : Icons.person_off,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                    const Spacer(),
+                    CustomerRankBadge(
+                      rank: rankForRewards(customer.rewardsEarned),
+                      iconSize: 22,
+                    ),
+                  ],
                 ),
                 const Spacer(),
                 Text(
@@ -208,6 +227,7 @@ class _CustomerGridCard extends StatelessWidget {
       if (customer.phone != null) customer.phone!,
       if (customer.email != null) customer.email!,
       customer.status == CustomerStatus.active ? 'active' : 'inactive',
+      rankLabel(rankForRewards(customer.rewardsEarned)),
     ];
     return parts.join(' · ');
   }

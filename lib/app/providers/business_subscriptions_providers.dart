@@ -5,10 +5,12 @@ import '../../data/repositories/repository_interfaces.dart';
 import '../../domain/entities/license_status.dart';
 import '../../domain/entities/subscription_card.dart';
 import '../../domain/entities/loyalty_card.dart';
+import '../../domain/services/loyalty_progress.dart';
 import '../../domain/value_objects/card_status.dart';
 import '../../domain/value_objects/loyalty_program_type.dart';
 import '../../domain/value_objects/subscription_type.dart';
 import 'app_settings_providers.dart';
+import 'business_customers_providers.dart';
 import 'license_providers.dart';
 
 final cardRepositoryProvider = Provider<CardRepository>((ref) {
@@ -117,15 +119,18 @@ class BusinessSubscriptionActions {
     LoyaltyProgramType programType = LoyaltyProgramType.stamps,
     int? pointsPerScan,
     int? challengeWindowDays,
+    DateTime? startsAt,
+    DateTime? validUntil,
   }) async {
     final license = await _ensureCanCreateCard(businessId);
     final repository = _ref.read(cardRepositoryProvider);
+    final now = DateTime.now();
     final card = LoyaltyCard(
       businessId: businessId,
       cardId: _newLoyaltyId(),
       customerId: customerId,
       name: name.trim(),
-      createdAt: DateTime.now(),
+      createdAt: now,
       status: CardStatus.active,
       currentStamps: 0,
       rewardThreshold: rewardThreshold,
@@ -137,8 +142,10 @@ class BusinessSubscriptionActions {
           ? challengeWindowDays ?? 30
           : null,
       challengeStartedAt: programType == LoyaltyProgramType.visitChallenge
-          ? DateTime.now()
+          ? now
           : null,
+      startsAt: startsAt ?? now,
+      validUntil: validUntil,
     );
 
     await repository.saveLoyaltyCard(card);
@@ -147,6 +154,47 @@ class BusinessSubscriptionActions {
     _ref.invalidate(loyaltyCardByIdProvider(card.cardId));
     _ref.invalidate(businessCardCountProvider(businessId));
     return _expiryWarning(license);
+  }
+
+  Future<LoyaltyCard?> updateLoyaltyCardValidity({
+    required String loyaltyCardId,
+    required DateTime startsAt,
+    DateTime? validUntil,
+  }) async {
+    final repository = _ref.read(cardRepositoryProvider);
+    final card = await repository.getLoyaltyCard(loyaltyCardId);
+    if (card == null) {
+      return null;
+    }
+
+    final updated = LoyaltyCard(
+      businessId: card.businessId,
+      cardId: card.cardId,
+      customerId: card.customerId,
+      name: card.name,
+      createdAt: card.createdAt,
+      status: card.status,
+      currentStamps: card.currentStamps,
+      rewardThreshold: card.rewardThreshold,
+      programType: card.programType,
+      pointsPerScan: card.pointsPerScan,
+      challengeWindowDays: card.challengeWindowDays,
+      challengeStartedAt: card.challengeStartedAt,
+      startsAt: startsAt,
+      validUntil: validUntil,
+      linkedWalletId: card.linkedWalletId,
+      dynamicChallenge: card.dynamicChallenge,
+      challengeTimestamp: card.challengeTimestamp,
+      challengeSignature: card.challengeSignature,
+      isBonusPending: card.isBonusPending,
+      isCompleted: card.isCompleted,
+    );
+
+    await repository.saveLoyaltyCard(updated);
+    _ref.invalidate(businessLoyaltyCardsProvider(updated.businessId));
+    _ref.invalidate(customerLoyaltyCardsProvider(updated.customerId));
+    _ref.invalidate(loyaltyCardByIdProvider(updated.cardId));
+    return updated;
   }
 
   Future<LoyaltyCard?> addDeliveryStamp(String loyaltyCardId) async {
@@ -168,6 +216,7 @@ class BusinessSubscriptionActions {
     await repository.saveLoyaltyCard(updated);
     _ref.invalidate(businessLoyaltyCardsProvider(updated.businessId));
     _ref.invalidate(loyaltyCardByIdProvider(updated.cardId));
+    await recordCustomerVisit(_ref, updated.customerId);
     return updated;
   }
 
@@ -186,6 +235,38 @@ class BusinessSubscriptionActions {
     await repository.saveLoyaltyCard(updated);
     _ref.invalidate(businessLoyaltyCardsProvider(updated.businessId));
     _ref.invalidate(loyaltyCardByIdProvider(updated.cardId));
+    await recordCustomerRewardEarned(_ref, updated.customerId);
+    return updated;
+  }
+
+  /// Grants a customer a birthday bonus entry on [loyaltyCardId] — a stamp,
+  /// a visit, or points, depending on the card's program type. Advances
+  /// progress exactly like a validated check-in scan, without requiring one.
+  Future<LoyaltyCard?> grantBirthdayReward(String loyaltyCardId) async {
+    final repository = _ref.read(cardRepositoryProvider);
+    final card = await repository.getLoyaltyCard(loyaltyCardId);
+    if (card == null || card.isCompleted) {
+      return card;
+    }
+
+    final progress = advanceLoyaltyProgress(card, DateTime.now());
+    final updated = card.copyWith(
+      currentStamps: progress.value,
+      challengeStartedAt: progress.challengeStartedAt,
+      isBonusPending:
+          progress.outcome == LoyaltyProgressOutcome.thresholdReached,
+      isCompleted: progress.outcome == LoyaltyProgressOutcome.bonusConsumed
+          ? true
+          : card.isCompleted,
+    );
+
+    await repository.saveLoyaltyCard(updated);
+    _ref.invalidate(businessLoyaltyCardsProvider(updated.businessId));
+    _ref.invalidate(customerLoyaltyCardsProvider(updated.customerId));
+    _ref.invalidate(loyaltyCardByIdProvider(updated.cardId));
+    if (progress.outcome == LoyaltyProgressOutcome.bonusConsumed) {
+      await recordCustomerRewardEarned(_ref, updated.customerId);
+    }
     return updated;
   }
 
@@ -210,9 +291,7 @@ class BusinessSubscriptionActions {
       _ref.invalidate(
         businessSubscriptionCardsProvider(subscription.businessId),
       );
-      _ref.invalidate(
-        customerSubscriptionsProvider(subscription.customerId),
-      );
+      _ref.invalidate(customerSubscriptionsProvider(subscription.customerId));
       _ref.invalidate(businessCardCountProvider(subscription.businessId));
     }
   }
@@ -237,7 +316,9 @@ class BusinessSubscriptionActions {
   String? _expiryWarning(LicenseStatus? license) {
     if (license == null || !license.isExpiringSoon) return null;
     final days = license.daysUntilExpiry!;
-    if (days <= 1) return 'License expires tomorrow! Renew to avoid interruptions.';
+    if (days <= 1) {
+      return 'License expires tomorrow! Renew to avoid interruptions.';
+    }
     return 'License expires in $days days. Renew to avoid interruptions.';
   }
 

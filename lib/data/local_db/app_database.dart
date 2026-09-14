@@ -259,7 +259,12 @@ CREATE TABLE IF NOT EXISTS customer_records (
   phone TEXT,
   email TEXT,
   notes TEXT,
-  linked_wallet_id TEXT
+  linked_wallet_id TEXT,
+  birth_month INTEGER,
+  birth_day INTEGER,
+  last_birthday_prompt_year INTEGER,
+  rewards_earned INTEGER NOT NULL DEFAULT 0,
+  last_visit_at INTEGER
 )
 ''',
   '''
@@ -296,6 +301,7 @@ CREATE TABLE IF NOT EXISTS loyalty_cards (
   points_per_scan INTEGER,
   challenge_window_days INTEGER,
   challenge_started_at INTEGER,
+  starts_at INTEGER,
   valid_until INTEGER,
   linked_wallet_id TEXT,
   dynamic_challenge TEXT,
@@ -573,6 +579,38 @@ const _columnMigrationStatements = [
     statement:
         'ALTER TABLE loyalty_cards ADD COLUMN is_completed INTEGER NOT NULL DEFAULT 0',
   ),
+  _ColumnMigrationStatement(
+    table: 'loyalty_cards',
+    column: 'starts_at',
+    statement: 'ALTER TABLE loyalty_cards ADD COLUMN starts_at INTEGER',
+  ),
+  _ColumnMigrationStatement(
+    table: 'customer_records',
+    column: 'birth_month',
+    statement: 'ALTER TABLE customer_records ADD COLUMN birth_month INTEGER',
+  ),
+  _ColumnMigrationStatement(
+    table: 'customer_records',
+    column: 'birth_day',
+    statement: 'ALTER TABLE customer_records ADD COLUMN birth_day INTEGER',
+  ),
+  _ColumnMigrationStatement(
+    table: 'customer_records',
+    column: 'last_birthday_prompt_year',
+    statement:
+        'ALTER TABLE customer_records ADD COLUMN last_birthday_prompt_year INTEGER',
+  ),
+  _ColumnMigrationStatement(
+    table: 'customer_records',
+    column: 'rewards_earned',
+    statement:
+        'ALTER TABLE customer_records ADD COLUMN rewards_earned INTEGER NOT NULL DEFAULT 0',
+  ),
+  _ColumnMigrationStatement(
+    table: 'customer_records',
+    column: 'last_visit_at',
+    statement: 'ALTER TABLE customer_records ADD COLUMN last_visit_at INTEGER',
+  ),
 ];
 
 const _postMigrationStatements = [
@@ -580,5 +618,10 @@ const _postMigrationStatements = [
 UPDATE customer_records
 SET updated_at = created_at
 WHERE updated_at IS NULL
+''',
+  '''
+UPDATE loyalty_cards
+SET starts_at = created_at
+WHERE starts_at IS NULL
 ''',
 ];

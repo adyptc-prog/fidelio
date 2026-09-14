@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../app/providers/client_wallet_providers.dart';
 import '../../../app/providers/nfc_access_providers.dart';
+import '../../../app/providers/scan_feedback_providers.dart';
 import '../../../core/constants/route_names.dart';
 import '../../../domain/entities/subscription_import_payload.dart';
 import '../../../presentation/layouts/section_shell.dart';
@@ -93,6 +96,11 @@ class _ClientImportCardScreenState
 
     _handlingScan = true;
     await _scannerController.stop();
+    unawaited(
+      ref
+          .read(scanFeedbackControllerProvider)
+          .play(ScanFeedbackEvent.scanDetected),
+    );
 
     try {
       final imported = await _importRawPayload(rawValue);
@@ -119,11 +127,21 @@ class _ClientImportCardScreenState
           .receivePayload();
       await _importRawPayload(rawPayload);
     } on FormatException catch (error) {
+      unawaited(
+        ref
+            .read(scanFeedbackControllerProvider)
+            .play(ScanFeedbackEvent.codeNotAccepted),
+      );
       if (!mounted) {
         return;
       }
       setState(() => _message = error.message);
     } on Object catch (error) {
+      unawaited(
+        ref
+            .read(scanFeedbackControllerProvider)
+            .play(ScanFeedbackEvent.codeNotAccepted),
+      );
       if (!mounted) {
         return;
       }
@@ -160,6 +178,11 @@ class _ClientImportCardScreenState
     if (!mounted) {
       return false;
     }
+    unawaited(
+      ref
+          .read(scanFeedbackControllerProvider)
+          .play(ScanFeedbackEvent.visitValid),
+    );
     if (importedCard == null) {
       context.go(RouteNames.clientCards);
       return true;
@@ -194,6 +217,11 @@ class _ClientImportCardScreenState
   }
 
   Future<void> _showScanError(String message) async {
+    unawaited(
+      ref
+          .read(scanFeedbackControllerProvider)
+          .play(ScanFeedbackEvent.codeNotAccepted),
+    );
     if (!mounted) {
       return;
     }

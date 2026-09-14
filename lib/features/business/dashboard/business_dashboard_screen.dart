@@ -7,21 +7,97 @@ import '../../../app/providers/business_check_in_providers.dart';
 import '../../../app/providers/business_profile_providers.dart';
 import '../../../app/providers/business_subscriptions_providers.dart';
 import '../../../app/providers/license_providers.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/constants/route_names.dart';
 import '../../../domain/entities/license_status.dart';
+import '../../../domain/services/birthday_service.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import '../clients/birthday_reward_dialog.dart';
 
-class BusinessDashboardScreen extends ConsumerWidget {
+class BusinessDashboardScreen extends ConsumerStatefulWidget {
   const BusinessDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BusinessDashboardScreen> createState() =>
+      _BusinessDashboardScreenState();
+}
+
+class _BusinessDashboardScreenState
+    extends ConsumerState<BusinessDashboardScreen>
+    with WidgetsBindingObserver {
+  bool _checkingBirthdays = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkBirthdays();
+    }
+  }
+
+  Future<void> _checkBirthdays() async {
+    if (_checkingBirthdays) {
+      return;
+    }
+    _checkingBirthdays = true;
+    try {
+      while (mounted) {
+        final customers = ref
+            .read(businessCustomersControllerProvider)
+            .valueOrNull
+            ?.customers;
+        if (customers == null) {
+          return;
+        }
+        final due = customersWithBirthdayToday(
+          customers,
+          today: DateTime.now(),
+        );
+        if (due.isEmpty) {
+          return;
+        }
+        await showBirthdayRewardDialog(context, customer: due.first);
+      }
+    } finally {
+      _checkingBirthdays = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen(businessCustomersControllerProvider, (previous, next) {
+      if (next.hasValue) {
+        _checkBirthdays();
+      }
+    });
+
     final business = ref.watch(businessProfileControllerProvider);
     final customers = ref.watch(businessCustomersControllerProvider);
+    if (customers.hasValue) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkBirthdays());
+    }
 
     return SectionShell(
       title: 'Business Mode',
       showBackButton: false,
+      actions: [
+        IconButton(
+          tooltip: 'Settings',
+          icon: const Icon(Icons.settings),
+          onPressed: () => context.push(RouteNames.businessSettings),
+        ),
+      ],
       child: business.when(
         data: (business) {
           if (business == null) {
@@ -92,13 +168,17 @@ class BusinessDashboardScreen extends ConsumerWidget {
                     onTap: () => context.push(RouteNames.businessNfcScanner),
                   ),
                   _DashboardAction(
-                    title: 'Settings',
-                    icon: Icons.settings,
+                    title: 'Leaderboard',
+                    icon: Icons.leaderboard,
                     colors: const [Color(0xFF5D4210), Color(0xFFD6AA2F)],
-                    onTap: () => context.push(RouteNames.businessSettings),
+                    onTap: () => context.push(RouteNames.businessLeaderboard),
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              const _AppVersionLabel(),
+              const SizedBox(height: 32),
+              const _AppFooter(),
             ],
           );
         },
@@ -106,6 +186,51 @@ class BusinessDashboardScreen extends ConsumerWidget {
         error: (error, stackTrace) =>
             Center(child: Text('Could not load dashboard: $error')),
       ),
+    );
+  }
+}
+
+class _AppVersionLabel extends StatelessWidget {
+  const _AppVersionLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    final subtleColor = Theme.of(
+      context,
+    ).textTheme.bodySmall?.color?.withValues(alpha: 0.6);
+    return Center(
+      child: Text(
+        AppConstants.appVersionLabel,
+        style: TextStyle(color: subtleColor, fontSize: 12),
+      ),
+    );
+  }
+}
+
+class _AppFooter extends StatelessWidget {
+  const _AppFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    final subtleColor = Theme.of(
+      context,
+    ).textTheme.bodySmall?.color?.withValues(alpha: 0.6);
+    return Column(
+      children: [
+        Text(
+          AppConstants.appTagline,
+          style: TextStyle(color: subtleColor, fontSize: 12),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          AppConstants.appWebsite,
+          style: TextStyle(
+            color: subtleColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -296,13 +421,15 @@ class _LicenseStatusBanner extends ConsumerWidget {
               color: status.isExpiringSoon ? Colors.orange : Colors.green,
             ),
             title: Text(
-              status.isExpiringSoon ? 'License expiring soon' : 'License active',
+              status.isExpiringSoon
+                  ? 'License expiring soon'
+                  : 'License active',
             ),
             subtitle: Text(
               status.isExpiringSoon && status.daysUntilExpiry != null
                   ? status.daysUntilExpiry! <= 1
-                      ? 'Expires tomorrow! Renew to avoid interruptions.'
-                      : '${status.daysUntilExpiry} days remaining. Renew to avoid interruptions.'
+                        ? 'Expires tomorrow! Renew to avoid interruptions.'
+                        : '${status.daysUntilExpiry} days remaining. Renew to avoid interruptions.'
                   : 'Unlimited cards enabled.',
             ),
           ),
