@@ -1056,7 +1056,7 @@ void main() {
   });
 
   testWidgets(
-    'client card details shows Refer a Friend only when the business allows it',
+    'client card details shows Refer a Friend for any active loyalty card',
     (tester) async {
       tester.view.physicalSize = const Size(1000, 1600);
       tester.view.devicePixelRatio = 1;
@@ -1067,6 +1067,10 @@ void main() {
       addTearDown(db.close);
 
       await DriftAppSettingsRepository(db).saveSelectedMode(AppMode.client);
+      // referralEnabled is false here on purpose: it only reflects the
+      // business's toggle state at the moment this card was imported, and
+      // must not hide the button — the business enforces the toggle live,
+      // at redemption time, not the client at display time.
       await DriftWalletRepository(db).saveWalletCard(
         WalletCard(
           walletCardId: 'wallet-card-referral',
@@ -1082,25 +1086,23 @@ void main() {
           entriesRemaining: 5,
           scanValue: 1,
           programType: 'stamps',
-          referralEnabled: true,
+          referralEnabled: false,
         ),
       );
       await DriftWalletRepository(db).saveWalletCard(
         WalletCard(
-          walletCardId: 'wallet-card-no-referral',
+          walletCardId: 'wallet-card-subscription',
           walletId: _testClientWalletId,
           businessId: 'business-2',
-          cardId: 'loyalty-2',
-          cardType: 'loyalty',
-          displayName: 'Bakery Points',
+          cardId: 'subscription-2',
+          cardType: 'subscription',
+          displayName: 'Bakery Membership',
           createdAt: DateTime.utc(2026, 5, 13),
           status: CardStatus.active,
           businessName: 'Bakery',
           entriesTotal: 8,
           entriesRemaining: 5,
           scanValue: 1,
-          programType: 'stamps',
-          referralEnabled: false,
         ),
       );
 
@@ -1126,7 +1128,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Bakery Points'));
+      await tester.tap(find.text('Bakery Membership'));
       await tester.pumpAndSettle();
       expect(find.text('Refer a Friend'), findsNothing);
     },

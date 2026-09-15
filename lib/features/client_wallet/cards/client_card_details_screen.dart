@@ -37,9 +37,15 @@ class ClientCardDetailsScreen extends ConsumerWidget {
             onActivate: card.pendingActivation
                 ? () => context.push(_cardRoute(RouteNames.clientCardActivate))
                 : null,
+            // The business enforces whether referrals are currently accepted
+            // live, at redemption time (see BusinessCheckInController).
+            // Gating this button on a flag captured when the card was
+            // imported would leave it permanently hidden on cards issued
+            // before the business turned referrals on, since there is no
+            // channel to push that setting change back to an already-issued
+            // card in this offline, device-to-device architecture.
             onRefer:
                 card.cardType == 'loyalty' &&
-                    card.referralEnabled &&
                     card.status == CardStatus.active &&
                     !card.pendingActivation
                 ? () => context.push(_cardRoute(RouteNames.clientCardRefer))
