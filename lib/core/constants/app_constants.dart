@@ -6,7 +6,7 @@ class AppConstants {
   static const backupFileExtension = '.local-loyalty-backup';
 
   /// Keep in sync with the `version:` field in pubspec.yaml.
-  static const appVersion = '1.0.3';
+  static const appVersion = '1.0.4';
   static const appVersionLabel = 'v$appVersion';
 
   static const appTagline = 'Fidelio by Volt Academy';
