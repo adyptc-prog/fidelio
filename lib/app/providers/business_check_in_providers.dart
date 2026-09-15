@@ -5,17 +5,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/local_qr_service.dart';
 import '../../data/repositories/drift_repositories.dart';
 import '../../data/repositories/repository_interfaces.dart';
+import '../../domain/entities/business_profile.dart';
 import '../../domain/entities/check_in_event.dart';
+import '../../domain/entities/customer_record.dart';
 import '../../domain/entities/loyalty_card.dart';
 import '../../domain/entities/subscription_card.dart';
+import '../../domain/entities/subscription_import_payload.dart';
 import '../../domain/services/loyalty_progress.dart';
 import '../../domain/value_objects/qr_challenge_payload.dart';
 import '../../domain/value_objects/card_status.dart';
+import '../../domain/value_objects/loyalty_program_type.dart';
 import 'app_settings_providers.dart';
 import 'business_customers_providers.dart';
 import 'business_profile_providers.dart';
 import 'business_subscriptions_providers.dart';
 import 'qr_providers.dart';
+
+/// Which kind of QR/NFC payload a raw scan turned out to be, used by the
+/// scanner UI to route to the right handler before doing any DB writes.
+enum ScanPayloadKind { dynamicCheckIn, referralInvite, unknown }
 
 final checkInRepositoryProvider = Provider<CheckInRepository>((ref) {
   return DriftCheckInRepository(ref.watch(appDatabaseProvider));
@@ -44,10 +52,43 @@ class CheckInScanResult {
   final SubscriptionCard? subscription;
 }
 
+/// Result of validating a referral invite before the business commits to
+/// registering it (no DB writes happen until [BusinessCheckInController
+/// .completeReferralRedemption] is called).
+class ReferralRedemptionCheck {
+  const ReferralRedemptionCheck({
+    required this.isValid,
+    required this.reason,
+    this.payload,
+    this.referrerCard,
+  });
+
+  final bool isValid;
+  final String reason;
+  final SubscriptionImportPayload? payload;
+  final LoyaltyCard? referrerCard;
+}
+
 class BusinessCheckInController {
   const BusinessCheckInController(this._ref);
 
   final Ref _ref;
+
+  ScanPayloadKind classifyRawPayload(String rawPayload) {
+    final decoded = _tryDecodeJson(rawPayload);
+    if (decoded == null) {
+      return ScanPayloadKind.unknown;
+    }
+    final type = decoded['type'] as String?;
+    if (type == LocalQrService.dynamicChallengeType) {
+      return ScanPayloadKind.dynamicCheckIn;
+    }
+    if (type == LocalQrService.subscriptionImportType &&
+        decoded['referrerCardId'] != null) {
+      return ScanPayloadKind.referralInvite;
+    }
+    return ScanPayloadKind.unknown;
+  }
 
   Future<CheckInScanResult> processRawPayload(String rawPayload) async {
     if (_payloadType(rawPayload) == LocalQrService.dynamicChallengeType) {
@@ -59,16 +100,194 @@ class BusinessCheckInController {
     throw const FormatException('Unsupported QR type.');
   }
 
-  String? _payloadType(String rawPayload) {
+  /// Verifies a scanned referral invite without writing anything to the
+  /// database yet — checks signature, that referrals are enabled here, that
+  /// this exact invite hasn't already been redeemed, and looks up the
+  /// referrer's card.
+  Future<ReferralRedemptionCheck> prepareReferralRedemption(
+    String rawPayload,
+  ) async {
+    final business = await _ref.read(businessProfileControllerProvider.future);
+    if (business == null) {
+      return const ReferralRedemptionCheck(isValid: false, reason: 'unknown');
+    }
+
+    final SubscriptionImportPayload payload;
+    try {
+      payload = _ref
+          .read(qrServiceProvider)
+          .decodeSubscriptionImportPayload(rawPayload);
+    } on FormatException {
+      return const ReferralRedemptionCheck(
+        isValid: false,
+        reason: 'invalid QR',
+      );
+    }
+
+    return _validateReferral(payload, business);
+  }
+
+  /// Creates the friend's customer + loyalty card (with their welcome bonus
+  /// already applied) and, if the referrer's card can still be found,
+  /// grants them a reward too. Re-validates [payload] first, since time may
+  /// have passed since [prepareReferralRedemption].
+  Future<CheckInScanResult> completeReferralRedemption(
+    SubscriptionImportPayload payload, {
+    required String customerName,
+    String? customerPhone,
+  }) async {
+    final business = await _ref.read(businessProfileControllerProvider.future);
+    if (business == null) {
+      return const CheckInScanResult(isValid: false, message: 'unknown');
+    }
+
+    final check = await _validateReferral(payload, business);
+    if (!check.isValid) {
+      return CheckInScanResult(isValid: false, message: check.reason);
+    }
+
+    final now = DateTime.now();
+    final cardRepository = _ref.read(cardRepositoryProvider);
+    final customerId = _newReferralCustomerId();
+    final programType = _programTypeFromName(payload.programType);
+    final rewardThreshold = payload.entriesTotal ?? 1;
+    final entriesRemaining = payload.entriesRemaining ?? rewardThreshold;
+    final currentStamps = (rewardThreshold - entriesRemaining).clamp(
+      0,
+      rewardThreshold,
+    );
+
+    await _ref
+        .read(customerRepositoryProvider)
+        .saveCustomer(
+          CustomerRecord(
+            customerId: customerId,
+            businessId: business.businessId,
+            displayName: customerName.trim(),
+            createdAt: now,
+            updatedAt: now,
+            phone: customerPhone,
+          ),
+        );
+
+    final newCard = LoyaltyCard(
+      businessId: business.businessId,
+      cardId: payload.subscriptionId,
+      customerId: customerId,
+      name: payload.cardTitle,
+      createdAt: now,
+      status: CardStatus.active,
+      currentStamps: currentStamps,
+      rewardThreshold: rewardThreshold,
+      programType: programType,
+      pointsPerScan: programType == LoyaltyProgramType.points
+          ? (payload.scanValue ?? 10)
+          : null,
+      challengeWindowDays: programType == LoyaltyProgramType.visitChallenge
+          ? (payload.challengeWindowDays ?? 30)
+          : null,
+      challengeStartedAt: programType == LoyaltyProgramType.visitChallenge
+          ? now
+          : null,
+      startsAt: now,
+    );
+    await cardRepository.saveLoyaltyCard(newCard);
+    _ref.invalidate(businessLoyaltyCardsProvider(business.businessId));
+    _ref.invalidate(customerLoyaltyCardsProvider(customerId));
+    _ref.invalidate(loyaltyCardByIdProvider(newCard.cardId));
+    _ref.invalidate(businessCardCountProvider(business.businessId));
+    _ref.invalidate(businessCustomersControllerProvider);
+
+    final referrerCard = check.referrerCard;
+    if (referrerCard == null) {
+      return const CheckInScanResult(
+        isValid: true,
+        message: 'referral_registered_no_referrer',
+      );
+    }
+
+    await _ref
+        .read(businessSubscriptionActionsProvider)
+        .grantBonusEntry(referrerCard.cardId);
+
+    return const CheckInScanResult(
+      isValid: true,
+      message: 'referral_registered',
+    );
+  }
+
+  Future<ReferralRedemptionCheck> _validateReferral(
+    SubscriptionImportPayload payload,
+    BusinessProfile business,
+  ) async {
+    if (!payload.isReferralInvite) {
+      return const ReferralRedemptionCheck(
+        isValid: false,
+        reason: 'not_a_referral',
+      );
+    }
+    if (payload.businessId != business.businessId) {
+      return const ReferralRedemptionCheck(isValid: false, reason: 'unknown');
+    }
+    if (!business.referralProgramEnabled) {
+      return ReferralRedemptionCheck(
+        isValid: false,
+        reason: 'referrals_disabled',
+        payload: payload,
+      );
+    }
+
+    final cardRepository = _ref.read(cardRepositoryProvider);
+    final existingCard = await cardRepository.getLoyaltyCard(
+      payload.subscriptionId,
+    );
+    if (existingCard != null) {
+      return ReferralRedemptionCheck(
+        isValid: false,
+        reason: 'already_registered',
+        payload: payload,
+      );
+    }
+
+    LoyaltyCard? referrerCard;
+    final referrerId = payload.referrerCardId;
+    if (referrerId != null) {
+      final candidate = await cardRepository.getLoyaltyCard(referrerId);
+      if (candidate != null && candidate.businessId == business.businessId) {
+        referrerCard = candidate;
+      }
+    }
+
+    return ReferralRedemptionCheck(
+      isValid: true,
+      reason: 'ok',
+      payload: payload,
+      referrerCard: referrerCard,
+    );
+  }
+
+  LoyaltyProgramType _programTypeFromName(String? name) {
+    return LoyaltyProgramType.values.firstWhere(
+      (value) => value.name == name,
+      orElse: () => LoyaltyProgramType.stamps,
+    );
+  }
+
+  String _newReferralCustomerId() {
+    return 'customer-referral-${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  Map<String, Object?>? _tryDecodeJson(String rawPayload) {
     try {
       final decoded = jsonDecode(rawPayload);
-      if (decoded is! Map<String, Object?>) {
-        return null;
-      }
-      return decoded['type'] as String?;
+      return decoded is Map<String, Object?> ? decoded : null;
     } on FormatException {
       return null;
     }
+  }
+
+  String? _payloadType(String rawPayload) {
+    return _tryDecodeJson(rawPayload)?['type'] as String?;
   }
 
   Future<CheckInScanResult> processDynamicChallenge(

@@ -26,7 +26,10 @@ class RouteNames {
   static const clientCardDetails = '/client/cards/:walletCardId';
   static const clientCardQrAccess = '/client/cards/:walletCardId/qr-access';
   static const clientCardNfcAccess = '/client/cards/:walletCardId/nfc-access';
+  static const clientCardRefer = '/client/cards/:walletCardId/refer';
+  static const clientCardActivate = '/client/cards/:walletCardId/activate';
   static const clientImportCard = '/client/import-card';
+  static const clientRecommend = '/client/recommend';
   static const clientDynamicQr = '/client/dynamic-qr';
   static const clientManualCards = '/client/manual-cards';
   static const clientSettings = '/client/settings';

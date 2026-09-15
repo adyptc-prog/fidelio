@@ -19,23 +19,39 @@ class ClientWalletScreen extends StatelessWidget {
           onPressed: () => context.push(RouteNames.clientSettings),
         ),
       ],
-      child: GridView.count(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1,
+      child: ListView(
         children: [
-          _ClientActionTile(
-            title: 'My Cards',
-            icon: Icons.credit_card,
-            colors: const [Color(0xFF0B3B34), Color(0xFF16705F)],
-            onTap: () => context.push(RouteNames.clientCards),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1,
+            children: [
+              _ClientActionTile(
+                title: 'My Cards',
+                icon: Icons.credit_card,
+                colors: const [Color(0xFF0B3B34), Color(0xFF16705F)],
+                onTap: () => context.push(RouteNames.clientCards),
+              ),
+              _ClientActionTile(
+                title: 'Import Card',
+                icon: Icons.file_download,
+                colors: const [Color(0xFF123A52), Color(0xFF2A7C96)],
+                onTap: () => context.push(RouteNames.clientImportCard),
+              ),
+            ],
           ),
-          _ClientActionTile(
-            title: 'Import Card',
-            icon: Icons.file_download,
-            colors: const [Color(0xFF123A52), Color(0xFF2A7C96)],
-            onTap: () => context.push(RouteNames.clientImportCard),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: FilledButton.icon(
+              icon: const Icon(Icons.campaign),
+              label: const Text('Recommend Fidelio'),
+              onPressed: () => context.push(RouteNames.clientRecommend),
+            ),
           ),
         ],
       ),

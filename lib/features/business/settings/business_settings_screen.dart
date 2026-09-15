@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/providers/app_settings_providers.dart';
+import '../../../app/providers/business_profile_providers.dart';
 import '../../../core/constants/route_names.dart';
 import '../../../domain/entities/app_settings.dart';
 import '../../../domain/value_objects/app_mode.dart';
@@ -18,6 +19,7 @@ class BusinessSettingsScreen extends ConsumerWidget {
     final current =
         settings.valueOrNull ?? const AppSettings(selectedMode: null);
     final controller = ref.read(appSettingsControllerProvider.notifier);
+    final business = ref.watch(businessProfileControllerProvider);
 
     return SectionShell(
       title: 'Business Settings',
@@ -124,6 +126,22 @@ class BusinessSettingsScreen extends ConsumerWidget {
               title: const Text('Dark Mode'),
               value: current.darkMode,
               onChanged: controller.setDarkMode,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: SwitchListTile(
+              secondary: const Icon(Icons.share),
+              title: const Text('Referral Program'),
+              subtitle: const Text(
+                'Let customers refer a friend for a reward on their loyalty card',
+              ),
+              value: business.valueOrNull?.referralProgramEnabled ?? false,
+              onChanged: business.valueOrNull == null
+                  ? null
+                  : (enabled) => ref
+                        .read(businessProfileControllerProvider.notifier)
+                        .setReferralProgramEnabled(enabled),
             ),
           ),
           const SizedBox(height: 12),

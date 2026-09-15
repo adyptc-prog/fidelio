@@ -88,10 +88,15 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
           .play(ScanFeedbackEvent.scanDetected),
     );
 
+    final controller = ref.read(businessCheckInControllerProvider);
+    if (controller.classifyRawPayload(rawValue) ==
+        ScanPayloadKind.referralInvite) {
+      await _handleReferralInvite(rawValue);
+      return;
+    }
+
     try {
-      final result = await ref
-          .read(businessCheckInControllerProvider)
-          .processRawPayload(rawValue);
+      final result = await controller.processRawPayload(rawValue);
       if (!mounted) {
         return;
       }
@@ -120,11 +125,118 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
     }
   }
 
+  Future<void> _handleReferralInvite(String rawValue) async {
+    final controller = ref.read(businessCheckInControllerProvider);
+    final check = await controller.prepareReferralRedemption(rawValue);
+
+    if (!check.isValid) {
+      if (!mounted) {
+        return;
+      }
+      final result = CheckInScanResult(isValid: false, message: check.reason);
+      setState(() => _lastResult = result);
+      unawaited(
+        ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
+      );
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+    final info = await _showReferralNameDialog(context);
+    if (info == null) {
+      if (mounted) {
+        await _restartScanner();
+      }
+      return;
+    }
+
+    final result = await controller.completeReferralRedemption(
+      check.payload!,
+      customerName: info.name,
+      customerPhone: info.phone,
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() => _lastResult = result);
+    unawaited(
+      ref.read(scanFeedbackControllerProvider).playForCheckInResult(result),
+    );
+  }
+
+  Future<_ReferralCustomerInfo?> _showReferralNameDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    return showDialog<_ReferralCustomerInfo>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('New Referred Customer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'This card was shared by an existing customer. Enter the new '
+              "customer's details to register their card.",
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: nameController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Customer Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Phone optional',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              Navigator.of(context).pop(
+                _ReferralCustomerInfo(
+                  name: name.isEmpty ? 'New Customer' : name,
+                  phone: phoneController.text.trim().isEmpty
+                      ? null
+                      : phoneController.text.trim(),
+                ),
+              );
+            },
+            child: const Text('Register'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _restartScanner() async {
     setState(() => _lastResult = null);
     _handlingScan = false;
     await _scannerController.start();
   }
+}
+
+class _ReferralCustomerInfo {
+  const _ReferralCustomerInfo({required this.name, this.phone});
+
+  final String name;
+  final String? phone;
 }
 
 class _ScanResultCard extends StatelessWidget {
@@ -256,6 +368,39 @@ class _ScanResultPresentation {
         description:
             'The code does not match an active membership for this business.',
         icon: Icons.help,
+      ),
+      'referral_registered' => const _ScanResultPresentation(
+        title: 'Referral Registered!',
+        description:
+            'The new card was created with a welcome bonus, and the '
+            'referrer received a reward on their card.',
+        icon: Icons.celebration,
+      ),
+      'referral_registered_no_referrer' => const _ScanResultPresentation(
+        title: 'Card Registered',
+        description:
+            'The new card was created with a welcome bonus. The referrer\'s '
+            'card could no longer be found, so no reward was granted.',
+        icon: Icons.person_add_alt_1,
+      ),
+      'referrals_disabled' => const _ScanResultPresentation(
+        title: 'Referrals Disabled',
+        description:
+            'This code is a referral invite, but the referral program is '
+            'turned off. Enable it in Settings to accept it.',
+        icon: Icons.toggle_off,
+      ),
+      'already_registered' => const _ScanResultPresentation(
+        title: 'Already Registered',
+        description: 'This referral code was already used to register a card.',
+        icon: Icons.replay_circle_filled,
+      ),
+      'not_a_referral' => const _ScanResultPresentation(
+        title: 'Not a Check-In Code',
+        description:
+            'This looks like a card meant to be imported by a client, not '
+            'scanned by the business.',
+        icon: Icons.error_outline,
       ),
       _ =>
         result.isValid

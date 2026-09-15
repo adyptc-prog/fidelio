@@ -17,6 +17,10 @@ class SubscriptionImportPayload {
     this.entriesTotal,
     this.entriesRemaining,
     this.scanValue,
+    this.programType,
+    this.challengeWindowDays,
+    this.referrerCardId,
+    this.referralProgramEnabled = false,
     this.signature,
   });
 
@@ -36,8 +40,27 @@ class SubscriptionImportPayload {
   final int? entriesTotal;
   final int? entriesRemaining;
   final int? scanValue;
+
+  /// Loyalty program type name (e.g. 'stamps', 'points', 'visitChallenge',
+  /// 'delivery'), carried so a referred card can be recreated faithfully.
+  final String? programType;
+
+  /// Only meaningful for `visitChallenge` cards.
+  final int? challengeWindowDays;
+
+  /// Set when this payload is a referral invite: the card id of the
+  /// customer who shared it, so the business can reward them on redemption.
+  final String? referrerCardId;
+
+  /// Whether the issuing business currently has the referral program
+  /// enabled. Mirrored onto the client's wallet card so it knows whether to
+  /// offer a "Refer a Friend" action.
+  final bool referralProgramEnabled;
+
   final DateTime issuedAt;
   final String? signature;
+
+  bool get isReferralInvite => referrerCardId != null;
 
   SubscriptionImportPayload copyWith({String? signature}) {
     return SubscriptionImportPayload(
@@ -58,6 +81,10 @@ class SubscriptionImportPayload {
       entriesTotal: entriesTotal,
       entriesRemaining: entriesRemaining,
       scanValue: scanValue,
+      programType: programType,
+      challengeWindowDays: challengeWindowDays,
+      referrerCardId: referrerCardId,
+      referralProgramEnabled: referralProgramEnabled,
       signature: signature ?? this.signature,
     );
   }
@@ -80,6 +107,10 @@ class SubscriptionImportPayload {
       'entriesTotal': entriesTotal,
       'entriesRemaining': entriesRemaining,
       'scanValue': scanValue,
+      'programType': programType,
+      'challengeWindowDays': challengeWindowDays,
+      'referrerCardId': referrerCardId,
+      'referralProgramEnabled': referralProgramEnabled,
       'issuedAt': issuedAt.toUtc().toIso8601String(),
       'signature': signature,
     };
@@ -103,6 +134,10 @@ class SubscriptionImportPayload {
       entriesTotal: json['entriesTotal'] as int?,
       entriesRemaining: json['entriesRemaining'] as int?,
       scanValue: json['scanValue'] as int?,
+      programType: json['programType'] as String?,
+      challengeWindowDays: json['challengeWindowDays'] as int?,
+      referrerCardId: json['referrerCardId'] as String?,
+      referralProgramEnabled: json['referralProgramEnabled'] as bool? ?? false,
       issuedAt: _parseDate(json['issuedAt']),
       signature: json['signature'] as String?,
     );

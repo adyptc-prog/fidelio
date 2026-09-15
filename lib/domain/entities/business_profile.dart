@@ -10,6 +10,7 @@ class BusinessProfile {
     this.cardAccentColor,
     this.activitySymbol,
     this.localPublicKey,
+    this.referralProgramEnabled = false,
   });
 
   final String businessId;
@@ -22,4 +23,8 @@ class BusinessProfile {
   final int? cardAccentColor;
   final String? activitySymbol;
   final String? localPublicKey;
+
+  /// Whether customers can refer a friend for a reward on their loyalty
+  /// cards from this business.
+  final bool referralProgramEnabled;
 }

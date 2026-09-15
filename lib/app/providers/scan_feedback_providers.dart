@@ -114,7 +114,9 @@ ScanFeedbackEvent categorizeCheckInResult(CheckInScanResult result) {
   }
   return switch (result.message) {
     'expired' || 'not_active_yet' => ScanFeedbackEvent.cardExpired,
-    'invalid QR' || 'unknown' => ScanFeedbackEvent.codeNotAccepted,
+    'invalid QR' ||
+    'unknown' ||
+    'not_a_referral' => ScanFeedbackEvent.codeNotAccepted,
     _ => ScanFeedbackEvent.visitRejected,
   };
 }

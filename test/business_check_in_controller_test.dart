@@ -12,6 +12,7 @@ import 'package:fidelio/domain/entities/business_profile.dart';
 import 'package:fidelio/domain/entities/customer_record.dart';
 import 'package:fidelio/domain/entities/loyalty_card.dart';
 import 'package:fidelio/domain/entities/subscription_card.dart';
+import 'package:fidelio/domain/entities/wallet_card.dart';
 import 'package:fidelio/domain/value_objects/card_status.dart';
 import 'package:fidelio/domain/value_objects/loyalty_program_type.dart';
 import 'package:fidelio/domain/value_objects/subscription_type.dart';
@@ -687,6 +688,273 @@ void main() {
           db,
         ).getCustomer('customer-1');
         expect(customer?.lastVisitAt, isNotNull);
+      },
+    );
+  });
+
+  group('BusinessCheckInController referral redemption', () {
+    final now = DateTime.utc(2026, 5, 13, 10);
+
+    Future<void> seedBusiness(
+      AppDatabase db, {
+      bool referralProgramEnabled = true,
+    }) async {
+      await DriftBusinessRepository(db).saveBusinessProfile(
+        BusinessProfile(
+          businessId: 'business-1',
+          displayName: 'Coffee Shop',
+          createdAt: now,
+          referralProgramEnabled: referralProgramEnabled,
+        ),
+      );
+    }
+
+    Future<String> seedReferrer(
+      AppDatabase db, {
+      int currentStamps = 0,
+      int rewardThreshold = 8,
+      bool isBonusPending = false,
+    }) async {
+      await DriftCustomerRepository(db).saveCustomer(
+        CustomerRecord(
+          customerId: 'customer-referrer',
+          businessId: 'business-1',
+          createdAt: now,
+          updatedAt: now,
+          displayName: 'Ana Referrer',
+        ),
+      );
+      await DriftCardRepository(db).saveLoyaltyCard(
+        LoyaltyCard(
+          businessId: 'business-1',
+          cardId: 'loyalty-referrer',
+          customerId: 'customer-referrer',
+          name: 'Coffee Loyalty',
+          createdAt: now,
+          status: CardStatus.active,
+          currentStamps: currentStamps,
+          rewardThreshold: rewardThreshold,
+          isBonusPending: isBonusPending,
+        ),
+      );
+      return 'loyalty-referrer';
+    }
+
+    String referralInviteRawPayload({
+      String referrerCardId = 'loyalty-referrer',
+      bool referralProgramEnabled = true,
+    }) {
+      final service = LocalQrService(clock: () => now);
+      final payload = service.createReferralInvitePayload(
+        sourceCard: WalletCard(
+          walletCardId: 'wallet-card-friend',
+          walletId: 'wallet-friend',
+          businessId: 'business-1',
+          cardId: referrerCardId,
+          cardType: 'loyalty',
+          displayName: 'Coffee Loyalty',
+          createdAt: now,
+          status: CardStatus.active,
+          businessName: 'Coffee Shop',
+          entriesTotal: 8,
+          entriesRemaining: 8,
+          scanValue: 1,
+          programType: 'stamps',
+          referralEnabled: referralProgramEnabled,
+        ),
+      );
+      return service.encodeSubscriptionImportPayload(payload);
+    }
+
+    test('classifyRawPayload recognizes a referral invite', () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+
+      final kind = container
+          .read(businessCheckInControllerProvider)
+          .classifyRawPayload(referralInviteRawPayload());
+
+      expect(kind, ScanPayloadKind.referralInvite);
+    });
+
+    test(
+      'registers the friend and rewards the referrer on the happy path',
+      () async {
+        final db = AppDatabase.memory();
+        addTearDown(db.close);
+        final container = ProviderContainer(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+        );
+        addTearDown(container.dispose);
+        await seedBusiness(db);
+        await seedReferrer(db, currentStamps: 7, isBonusPending: false);
+
+        final controller = container.read(businessCheckInControllerProvider);
+        final rawPayload = referralInviteRawPayload();
+        final check = await controller.prepareReferralRedemption(rawPayload);
+        expect(check.isValid, isTrue);
+        expect(check.referrerCard?.cardId, 'loyalty-referrer');
+
+        final result = await controller.completeReferralRedemption(
+          check.payload!,
+          customerName: 'Bogdan Friend',
+          customerPhone: '0700000000',
+        );
+
+        expect(result.isValid, isTrue);
+        expect(result.message, 'referral_registered');
+
+        final loyaltyCards = await DriftCardRepository(
+          db,
+        ).listLoyaltyCards('business-1');
+        final friendCard = loyaltyCards.singleWhere(
+          (card) => card.cardId != 'loyalty-referrer',
+        );
+        expect(friendCard.currentStamps, 1);
+        expect(friendCard.rewardThreshold, 8);
+        expect(friendCard.programType, LoyaltyProgramType.stamps);
+
+        final friendCustomer = await DriftCustomerRepository(
+          db,
+        ).getCustomer(friendCard.customerId);
+        expect(friendCustomer?.displayName, 'Bogdan Friend');
+        expect(friendCustomer?.phone, '0700000000');
+
+        final referrerCard = await DriftCardRepository(
+          db,
+        ).getLoyaltyCard('loyalty-referrer');
+        expect(referrerCard?.currentStamps, 8);
+
+        final referrerCustomer = await DriftCustomerRepository(
+          db,
+        ).getCustomer('customer-referrer');
+        expect(referrerCustomer?.rewardsEarned, 0);
+      },
+    );
+
+    test(
+      'consuming the referrer bonus increments their reward count',
+      () async {
+        final db = AppDatabase.memory();
+        addTearDown(db.close);
+        final container = ProviderContainer(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+        );
+        addTearDown(container.dispose);
+        await seedBusiness(db);
+        await seedReferrer(
+          db,
+          currentStamps: 8,
+          rewardThreshold: 8,
+          isBonusPending: true,
+        );
+
+        final controller = container.read(businessCheckInControllerProvider);
+        final check = await controller.prepareReferralRedemption(
+          referralInviteRawPayload(),
+        );
+
+        await controller.completeReferralRedemption(
+          check.payload!,
+          customerName: 'Bogdan Friend',
+        );
+
+        final referrerCustomer = await DriftCustomerRepository(
+          db,
+        ).getCustomer('customer-referrer');
+        expect(referrerCustomer?.rewardsEarned, 1);
+      },
+    );
+
+    test('rejects redemption when referrals are disabled', () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+      await seedBusiness(db, referralProgramEnabled: false);
+      await seedReferrer(db);
+
+      final check = await container
+          .read(businessCheckInControllerProvider)
+          .prepareReferralRedemption(referralInviteRawPayload());
+
+      expect(check.isValid, isFalse);
+      expect(check.reason, 'referrals_disabled');
+      expect(
+        await DriftCardRepository(db).listLoyaltyCards('business-1'),
+        hasLength(1),
+      );
+    });
+
+    test('rejects a replayed (already-redeemed) referral invite', () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+      await seedBusiness(db);
+      await seedReferrer(db);
+
+      final controller = container.read(businessCheckInControllerProvider);
+      final rawPayload = referralInviteRawPayload();
+      final firstCheck = await controller.prepareReferralRedemption(rawPayload);
+      final firstResult = await controller.completeReferralRedemption(
+        firstCheck.payload!,
+        customerName: 'Bogdan Friend',
+      );
+      expect(firstResult.isValid, isTrue);
+
+      final secondCheck = await controller.prepareReferralRedemption(
+        rawPayload,
+      );
+      expect(secondCheck.isValid, isFalse);
+      expect(secondCheck.reason, 'already_registered');
+
+      final secondResult = await controller.completeReferralRedemption(
+        firstCheck.payload!,
+        customerName: 'Someone Else',
+      );
+      expect(secondResult.isValid, isFalse);
+      expect(secondResult.message, 'already_registered');
+    });
+
+    test(
+      'still registers the friend when the referrer card no longer exists',
+      () async {
+        final db = AppDatabase.memory();
+        addTearDown(db.close);
+        final container = ProviderContainer(
+          overrides: [appDatabaseProvider.overrideWithValue(db)],
+        );
+        addTearDown(container.dispose);
+        await seedBusiness(db);
+        // Note: no seedReferrer call — the referrer's card doesn't exist.
+
+        final controller = container.read(businessCheckInControllerProvider);
+        final check = await controller.prepareReferralRedemption(
+          referralInviteRawPayload(),
+        );
+        expect(check.isValid, isTrue);
+        expect(check.referrerCard, isNull);
+
+        final result = await controller.completeReferralRedemption(
+          check.payload!,
+          customerName: 'Bogdan Friend',
+        );
+
+        expect(result.isValid, isTrue);
+        expect(result.message, 'referral_registered_no_referrer');
+        expect(
+          await DriftCardRepository(db).listLoyaltyCards('business-1'),
+          hasLength(1),
+        );
       },
     );
   });

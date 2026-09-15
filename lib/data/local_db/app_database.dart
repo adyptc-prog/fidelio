@@ -245,7 +245,8 @@ CREATE TABLE IF NOT EXISTS business_profiles (
   address TEXT,
   card_accent_color INTEGER,
   activity_symbol TEXT,
-  local_public_key TEXT
+  local_public_key TEXT,
+  referral_program_enabled INTEGER NOT NULL DEFAULT 0
 )
 ''',
   '''
@@ -329,7 +330,12 @@ CREATE TABLE IF NOT EXISTS wallet_cards (
   valid_until INTEGER,
   dynamic_challenge TEXT,
   challenge_timestamp INTEGER,
-  challenge_signature TEXT
+  challenge_signature TEXT,
+  program_type TEXT,
+  challenge_window_days INTEGER,
+  referral_enabled INTEGER NOT NULL DEFAULT 0,
+  referrer_card_id TEXT,
+  pending_activation INTEGER NOT NULL DEFAULT 0
 )
 ''',
   '''
@@ -456,6 +462,12 @@ const _columnMigrationStatements = [
     statement: 'ALTER TABLE business_profiles ADD COLUMN local_public_key TEXT',
   ),
   _ColumnMigrationStatement(
+    table: 'business_profiles',
+    column: 'referral_program_enabled',
+    statement:
+        'ALTER TABLE business_profiles ADD COLUMN referral_program_enabled INTEGER NOT NULL DEFAULT 0',
+  ),
+  _ColumnMigrationStatement(
     table: 'customer_records',
     column: 'updated_at',
     statement: 'ALTER TABLE customer_records ADD COLUMN updated_at INTEGER',
@@ -538,6 +550,34 @@ const _columnMigrationStatements = [
     table: 'wallet_cards',
     column: 'scan_value',
     statement: 'ALTER TABLE wallet_cards ADD COLUMN scan_value INTEGER',
+  ),
+  _ColumnMigrationStatement(
+    table: 'wallet_cards',
+    column: 'program_type',
+    statement: 'ALTER TABLE wallet_cards ADD COLUMN program_type TEXT',
+  ),
+  _ColumnMigrationStatement(
+    table: 'wallet_cards',
+    column: 'challenge_window_days',
+    statement:
+        'ALTER TABLE wallet_cards ADD COLUMN challenge_window_days INTEGER',
+  ),
+  _ColumnMigrationStatement(
+    table: 'wallet_cards',
+    column: 'referral_enabled',
+    statement:
+        'ALTER TABLE wallet_cards ADD COLUMN referral_enabled INTEGER NOT NULL DEFAULT 0',
+  ),
+  _ColumnMigrationStatement(
+    table: 'wallet_cards',
+    column: 'referrer_card_id',
+    statement: 'ALTER TABLE wallet_cards ADD COLUMN referrer_card_id TEXT',
+  ),
+  _ColumnMigrationStatement(
+    table: 'wallet_cards',
+    column: 'pending_activation',
+    statement:
+        'ALTER TABLE wallet_cards ADD COLUMN pending_activation INTEGER NOT NULL DEFAULT 0',
   ),
   _ColumnMigrationStatement(
     table: 'loyalty_cards',

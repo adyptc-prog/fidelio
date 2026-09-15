@@ -26,11 +26,23 @@ class ClientCardDetailsScreen extends ConsumerWidget {
           }
           return _CardDetails(
             card: card,
-            onShowQr: card.status == CardStatus.active
+            onShowQr:
+                card.status == CardStatus.active && !card.pendingActivation
                 ? () => context.push(_cardRoute(RouteNames.clientCardQrAccess))
                 : null,
-            onWriteNfc: card.status == CardStatus.active
+            onWriteNfc:
+                card.status == CardStatus.active && !card.pendingActivation
                 ? () => context.push(_cardRoute(RouteNames.clientCardNfcAccess))
+                : null,
+            onActivate: card.pendingActivation
+                ? () => context.push(_cardRoute(RouteNames.clientCardActivate))
+                : null,
+            onRefer:
+                card.cardType == 'loyalty' &&
+                    card.referralEnabled &&
+                    card.status == CardStatus.active &&
+                    !card.pendingActivation
+                ? () => context.push(_cardRoute(RouteNames.clientCardRefer))
                 : null,
             onDelete: () => _deleteCard(context, ref, card),
           );
@@ -89,12 +101,16 @@ class _CardDetails extends StatelessWidget {
     required this.card,
     required this.onShowQr,
     required this.onWriteNfc,
+    required this.onActivate,
+    required this.onRefer,
     required this.onDelete,
   });
 
   final WalletCard card;
   final VoidCallback? onShowQr;
   final VoidCallback? onWriteNfc;
+  final VoidCallback? onActivate;
+  final VoidCallback? onRefer;
   final VoidCallback onDelete;
 
   @override
@@ -135,17 +151,44 @@ class _CardDetails extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        FilledButton.icon(
-          icon: const Icon(Icons.qr_code_2),
-          label: const Text('Generate QR Code'),
-          onPressed: onShowQr,
-        ),
-        const SizedBox(height: 8),
-        FilledButton.tonalIcon(
-          icon: const Icon(Icons.nfc),
-          label: const Text('NFC'),
-          onPressed: onWriteNfc,
-        ),
+        if (card.pendingActivation) ...[
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'This card was shared by a friend. Activate it on your '
+                'first visit to the business.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.icon(
+            icon: const Icon(Icons.qr_code_2),
+            label: const Text('Activate at Business'),
+            onPressed: onActivate,
+          ),
+        ] else ...[
+          FilledButton.icon(
+            icon: const Icon(Icons.qr_code_2),
+            label: const Text('Generate QR Code'),
+            onPressed: onShowQr,
+          ),
+          const SizedBox(height: 8),
+          FilledButton.tonalIcon(
+            icon: const Icon(Icons.nfc),
+            label: const Text('NFC'),
+            onPressed: onWriteNfc,
+          ),
+          if (onRefer != null) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.share),
+              label: const Text('Refer a Friend'),
+              onPressed: onRefer,
+            ),
+          ],
+        ],
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.delete_outline),

@@ -37,11 +37,41 @@ class BusinessProfileController extends AsyncNotifier<BusinessProfile?> {
       cardAccentColor: profile.cardAccentColor,
       activitySymbol: profile.activitySymbol,
       localPublicKey: _localSigningKey(profile, existing),
+      referralProgramEnabled:
+          existing?.referralProgramEnabled ?? profile.referralProgramEnabled,
     );
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       await repository.saveBusinessProfile(profileToSave);
       return repository.getBusinessProfile(profileToSave.businessId);
+    });
+  }
+
+  /// Enables or disables the customer referral program for the active
+  /// business.
+  Future<void> setReferralProgramEnabled(bool enabled) async {
+    final repository = ref.read(businessRepositoryProvider);
+    final current = state.valueOrNull;
+    if (current == null) {
+      return;
+    }
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      final updated = BusinessProfile(
+        businessId: current.businessId,
+        displayName: current.displayName,
+        createdAt: current.createdAt,
+        activityDomain: current.activityDomain,
+        phone: current.phone,
+        email: current.email,
+        address: current.address,
+        cardAccentColor: current.cardAccentColor,
+        activitySymbol: current.activitySymbol,
+        localPublicKey: current.localPublicKey,
+        referralProgramEnabled: enabled,
+      );
+      await repository.saveBusinessProfile(updated);
+      return repository.getBusinessProfile(updated.businessId);
     });
   }
 

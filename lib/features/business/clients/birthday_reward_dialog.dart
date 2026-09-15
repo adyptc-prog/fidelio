@@ -122,7 +122,7 @@ class _BirthdayRewardDialogState extends ConsumerState<_BirthdayRewardDialog> {
     try {
       await ref
           .read(businessSubscriptionActionsProvider)
-          .grantBirthdayReward(target.cardId);
+          .grantBonusEntry(target.cardId);
     } on Object catch (error) {
       if (!mounted) {
         return;

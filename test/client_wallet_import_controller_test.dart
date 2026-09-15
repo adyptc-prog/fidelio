@@ -92,6 +92,91 @@ void main() {
     );
   });
 
+  test(
+    'imports a referral invite with pending activation and referral fields',
+    () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+
+      final importedCard = await container
+          .read(clientWalletImportControllerProvider)
+          .importPayload(
+            SubscriptionImportPayload(
+              type: 'subscription_card_import',
+              version: 1,
+              businessId: 'business-1',
+              businessName: 'Coffee Shop',
+              clientId: '',
+              subscriptionId: 'loyalty-referral-1',
+              cardTitle: 'Coffee Loyalty',
+              validFrom: DateTime.utc(2026, 5, 13),
+              validUntil: DateTime.utc(2027, 5, 13),
+              issuedAt: DateTime.utc(2026, 5, 13),
+              cardType: 'loyalty',
+              entriesTotal: 8,
+              entriesRemaining: 7,
+              scanValue: 1,
+              programType: 'stamps',
+              referrerCardId: 'loyalty-1',
+              referralProgramEnabled: true,
+            ),
+            updateExisting: true,
+          );
+
+      expect(importedCard?.pendingActivation, isTrue);
+      expect(importedCard?.referrerCardId, 'loyalty-1');
+      expect(importedCard?.programType, 'stamps');
+      expect(importedCard?.referralEnabled, isTrue);
+      expect(importedCard?.entriesRemaining, 7);
+    },
+  );
+
+  test(
+    'confirmReferralActivation clears the pending activation flag',
+    () async {
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+
+      await DriftWalletRepository(db).saveWalletCard(
+        WalletCard(
+          walletCardId: 'wallet-card-1',
+          walletId: 'wallet-test',
+          businessId: 'business-1',
+          cardId: 'loyalty-referral-1',
+          cardType: 'loyalty',
+          displayName: 'Coffee Loyalty',
+          createdAt: DateTime.utc(2026, 5, 13),
+          status: CardStatus.active,
+          entriesTotal: 8,
+          entriesRemaining: 7,
+          scanValue: 1,
+          referrerCardId: 'loyalty-1',
+          pendingActivation: true,
+        ),
+      );
+
+      final updated = await container
+          .read(clientWalletImportControllerProvider)
+          .confirmReferralActivation('wallet-card-1');
+
+      expect(updated?.pendingActivation, isFalse);
+      expect(
+        (await DriftWalletRepository(
+          db,
+        ).getWalletCard('wallet-card-1'))?.pendingActivation,
+        isFalse,
+      );
+    },
+  );
+
   test('updates loyalty wallet card locally using scan value', () async {
     final db = AppDatabase.memory();
     addTearDown(db.close);

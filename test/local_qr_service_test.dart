@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fidelio/data/services/local_qr_service.dart';
 import 'package:fidelio/domain/entities/business_profile.dart';
 import 'package:fidelio/domain/entities/loyalty_card.dart';
+import 'package:fidelio/domain/entities/wallet_card.dart';
 import 'package:fidelio/domain/value_objects/card_status.dart';
 import 'package:fidelio/domain/value_objects/qr_challenge_payload.dart';
 
@@ -319,29 +320,153 @@ void main() {
       );
     });
 
-    test('stamps remaining is clamped to zero when stamps exceed threshold', () {
+    test(
+      'stamps remaining is clamped to zero when stamps exceed threshold',
+      () {
+        final service = LocalQrService(clock: () => issuedAt);
+        final payload = service.createLoyaltyImportPayload(
+          business: BusinessProfile(
+            businessId: 'business-1',
+            displayName: 'Coffee Shop',
+            createdAt: issuedAt,
+          ),
+          loyaltyCard: LoyaltyCard(
+            businessId: 'business-1',
+            cardId: 'loyalty-1',
+            customerId: 'customer-1',
+            name: 'Coffee loyalty',
+            createdAt: issuedAt,
+            status: CardStatus.active,
+            currentStamps: 12,
+            rewardThreshold: 8,
+          ),
+        );
+
+        expect(payload.entriesRemaining, 0);
+        expect(payload.entriesTotal, 8);
+      },
+    );
+  });
+
+  group('LocalQrService referral invites', () {
+    final issuedAt = DateTime.utc(2026, 5, 13, 10);
+
+    WalletCard sourceCard({
+      int entriesTotal = 8,
+      int entriesRemaining = 5,
+      bool referralEnabled = true,
+    }) {
+      return WalletCard(
+        walletCardId: 'wallet-card-1',
+        walletId: 'wallet-1',
+        businessId: 'business-1',
+        cardId: 'loyalty-1',
+        cardType: 'loyalty',
+        displayName: 'Coffee Loyalty',
+        createdAt: issuedAt,
+        status: CardStatus.active,
+        businessName: 'Coffee Shop',
+        entriesTotal: entriesTotal,
+        entriesRemaining: entriesRemaining,
+        scanValue: 1,
+        programType: 'stamps',
+        referralEnabled: referralEnabled,
+      );
+    }
+
+    test('creates an invite carrying the referrer card id', () {
       final service = LocalQrService(clock: () => issuedAt);
-      final payload = service.createLoyaltyImportPayload(
-        business: BusinessProfile(
-          businessId: 'business-1',
-          displayName: 'Coffee Shop',
-          createdAt: issuedAt,
-        ),
-        loyaltyCard: LoyaltyCard(
-          businessId: 'business-1',
-          cardId: 'loyalty-1',
-          customerId: 'customer-1',
-          name: 'Coffee loyalty',
-          createdAt: issuedAt,
-          status: CardStatus.active,
-          currentStamps: 12,
-          rewardThreshold: 8,
-        ),
+      final payload = service.createReferralInvitePayload(
+        sourceCard: sourceCard(),
       );
 
-      expect(payload.entriesRemaining, 0);
-      expect(payload.entriesTotal, 8);
+      final decoded = service.decodeSubscriptionImportPayload(
+        service.encodeSubscriptionImportPayload(payload),
+      );
+
+      expect(decoded.isReferralInvite, isTrue);
+      expect(decoded.referrerCardId, 'loyalty-1');
+      expect(decoded.cardType, 'loyalty');
+      expect(decoded.programType, 'stamps');
+      expect(decoded.referralProgramEnabled, isTrue);
+      // Starts one step ahead of zero (8 - 1 remaining left = welcome bonus).
+      expect(decoded.entriesTotal, 8);
+      expect(decoded.entriesRemaining, 7);
+      expect(decoded.subscriptionId, isNot('loyalty-1'));
     });
+
+    test('two invites from the same card get different ids', () {
+      final service = LocalQrService(clock: () => issuedAt);
+      final first = service.createReferralInvitePayload(
+        sourceCard: sourceCard(),
+      );
+      final second = service.createReferralInvitePayload(
+        sourceCard: sourceCard(),
+      );
+
+      expect(first.subscriptionId, isNot(second.subscriptionId));
+    });
+
+    test('rejects a tampered referrerCardId', () {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = service.createReferralInvitePayload(
+        sourceCard: sourceCard(),
+      );
+      final json = payload.toJson()..['referrerCardId'] = 'someone-elses-card';
+
+      expect(
+        () => service.decodeSubscriptionImportPayload(jsonEncode(json)),
+        throwsFormatException,
+      );
+    });
+
+    test('rejects a tampered referralProgramEnabled flag', () {
+      final service = LocalQrService(clock: () => issuedAt);
+      final payload = service.createReferralInvitePayload(
+        sourceCard: sourceCard(referralEnabled: false),
+      );
+      final json = payload.toJson()..['referralProgramEnabled'] = true;
+
+      expect(
+        () => service.decodeSubscriptionImportPayload(jsonEncode(json)),
+        throwsFormatException,
+      );
+    });
+
+    test(
+      'activation payload re-derives the same shape from an imported card',
+      () {
+        final service = LocalQrService(clock: () => issuedAt);
+        final referredCard = WalletCard(
+          walletCardId: 'wallet-card-2',
+          walletId: 'wallet-2',
+          businessId: 'business-1',
+          cardId: 'loyalty-referral-1',
+          cardType: 'loyalty',
+          displayName: 'Coffee Loyalty',
+          createdAt: issuedAt,
+          status: CardStatus.active,
+          entriesTotal: 8,
+          entriesRemaining: 7,
+          scanValue: 1,
+          programType: 'stamps',
+          referralEnabled: true,
+          referrerCardId: 'loyalty-1',
+          pendingActivation: true,
+        );
+
+        final payload = service.createReferralActivationPayload(
+          referredCard: referredCard,
+        );
+        final decoded = service.decodeSubscriptionImportPayload(
+          service.encodeSubscriptionImportPayload(payload),
+        );
+
+        expect(decoded.subscriptionId, 'loyalty-referral-1');
+        expect(decoded.referrerCardId, 'loyalty-1');
+        expect(decoded.isReferralInvite, isTrue);
+      },
+    );
   });
 
   group('LocalQrService dynamic challenge — edge cases', () {

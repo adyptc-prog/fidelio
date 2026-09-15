@@ -146,7 +146,7 @@ void main() {
     });
   });
 
-  group('BusinessSubscriptionActions.grantBirthdayReward', () {
+  group('BusinessSubscriptionActions.grantBonusEntry', () {
     late AppDatabase db;
     late ProviderContainer container;
 
@@ -194,7 +194,7 @@ void main() {
         ).listLoyaltyCards('business-1')).single;
         final actions = container.read(businessSubscriptionActionsProvider);
 
-        await actions.grantBirthdayReward(created.cardId);
+        await actions.grantBonusEntry(created.cardId);
         expect(
           (await DriftCustomerRepository(
             db,
@@ -202,7 +202,7 @@ void main() {
           0,
         );
 
-        await actions.grantBirthdayReward(created.cardId);
+        await actions.grantBonusEntry(created.cardId);
         expect(
           (await DriftCustomerRepository(
             db,
@@ -227,7 +227,7 @@ void main() {
 
       final updated = await container
           .read(businessSubscriptionActionsProvider)
-          .grantBirthdayReward(created.cardId);
+          .grantBonusEntry(created.cardId);
 
       expect(updated?.currentStamps, 1);
     });
@@ -235,7 +235,7 @@ void main() {
     test('returns null for an unknown card id', () async {
       final updated = await container
           .read(businessSubscriptionActionsProvider)
-          .grantBirthdayReward('does-not-exist');
+          .grantBonusEntry('does-not-exist');
 
       expect(updated, isNull);
     });
@@ -271,7 +271,7 @@ void main() {
 
       final updated = await container
           .read(businessSubscriptionActionsProvider)
-          .grantBirthdayReward(created.cardId);
+          .grantBonusEntry(created.cardId);
 
       expect(updated?.currentStamps, created.currentStamps);
       expect(updated?.isCompleted, isTrue);

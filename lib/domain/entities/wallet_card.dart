@@ -21,6 +21,11 @@ class WalletCard {
     this.dynamicChallenge,
     this.challengeTimestamp,
     this.challengeSignature,
+    this.programType,
+    this.challengeWindowDays,
+    this.referralEnabled = false,
+    this.referrerCardId,
+    this.pendingActivation = false,
   });
 
   final String walletCardId;
@@ -43,10 +48,30 @@ class WalletCard {
   final DateTime? challengeTimestamp;
   final String? challengeSignature;
 
+  /// Loyalty program type name (e.g. 'stamps', 'points', 'visitChallenge',
+  /// 'delivery'). Null for subscription/membership cards.
+  final String? programType;
+
+  /// Only meaningful for `visitChallenge` loyalty cards.
+  final int? challengeWindowDays;
+
+  /// Whether the issuing business currently allows referring a friend from
+  /// this card.
+  final bool referralEnabled;
+
+  /// Set when this card was received as a referral: the card id of the
+  /// friend who shared it. Kept as provenance even after activation.
+  final String? referrerCardId;
+
+  /// True for a referral-received card that hasn't been scanned in by the
+  /// business yet (it doesn't exist in the business's database until then).
+  final bool pendingActivation;
+
   WalletCard copyWith({
     int? entriesRemaining,
     int? scanValue,
     DateTime? challengeTimestamp,
+    bool? pendingActivation,
   }) {
     return WalletCard(
       walletCardId: walletCardId,
@@ -68,6 +93,11 @@ class WalletCard {
       dynamicChallenge: dynamicChallenge,
       challengeTimestamp: challengeTimestamp ?? this.challengeTimestamp,
       challengeSignature: challengeSignature,
+      programType: programType,
+      challengeWindowDays: challengeWindowDays,
+      referralEnabled: referralEnabled,
+      referrerCardId: referrerCardId,
+      pendingActivation: pendingActivation ?? this.pendingActivation,
     );
   }
 }

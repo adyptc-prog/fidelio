@@ -351,12 +351,55 @@ void main() {
 
       expect(find.text('My Cards'), findsOneWidget);
       expect(find.text('Import Card'), findsOneWidget);
+      expect(find.text('Recommend Fidelio'), findsOneWidget);
+      expect(find.text('Copy Recommendation Text'), findsNothing);
       expect(find.byIcon(Icons.settings), findsOneWidget);
       expect(find.text('Settings'), findsNothing);
       expect(find.text('Portofel'), findsNothing);
       expect(find.text('Dynamic QR'), findsNothing);
     },
   );
+
+  testWidgets('client can open and edit the Fidelio recommendation message', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+
+    await DriftAppSettingsRepository(db).saveSelectedMode(AppMode.client);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          clientWalletIdProvider.overrideWith(
+            (ref) async => _testClientWalletId,
+          ),
+        ],
+        child: const LocalLoyaltyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Recommend Fidelio'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recommend Fidelio'), findsWidgets);
+    expect(find.text(AppConstants.recommendationText), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
+    expect(find.text('Copy Text'), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'A custom message.');
+    await tester.pump();
+
+    expect(find.text('A custom message.'), findsOneWidget);
+    expect(find.text(AppConstants.recommendationText), findsNothing);
+  });
 
   testWidgets('client settings control view zoom and dark mode', (
     tester,
@@ -782,6 +825,44 @@ void main() {
     expect(find.text('Save Changes'), findsOneWidget);
   });
 
+  testWidgets('business settings toggles the referral program', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final db = AppDatabase.memory();
+    addTearDown(db.close);
+    await _seedBusinessWithCustomer(db);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const LocalLoyaltyApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.settings));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Referral Program'), findsOneWidget);
+    final initialSwitch = tester.widget<SwitchListTile>(
+      find.widgetWithText(SwitchListTile, 'Referral Program'),
+    );
+    expect(initialSwitch.value, isFalse);
+
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Referral Program'));
+    await tester.pumpAndSettle();
+
+    final updated = await DriftBusinessRepository(
+      db,
+    ).getBusinessProfile('business-1');
+    expect(updated?.referralProgramEnabled, isTrue);
+  });
+
   testWidgets('business settings control view zoom and dark mode', (
     tester,
   ) async {
@@ -817,7 +898,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Large'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(find.widgetWithText(SwitchListTile, 'Dark Mode'));
     await tester.pumpAndSettle();
 
     final settings = await DriftAppSettingsRepository(db).loadSettings();
@@ -973,6 +1054,83 @@ void main() {
     );
     expect(find.text('Update local card'), findsOneWidget);
   });
+
+  testWidgets(
+    'client card details shows Refer a Friend only when the business allows it',
+    (tester) async {
+      tester.view.physicalSize = const Size(1000, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final db = AppDatabase.memory();
+      addTearDown(db.close);
+
+      await DriftAppSettingsRepository(db).saveSelectedMode(AppMode.client);
+      await DriftWalletRepository(db).saveWalletCard(
+        WalletCard(
+          walletCardId: 'wallet-card-referral',
+          walletId: _testClientWalletId,
+          businessId: 'business-1',
+          cardId: 'loyalty-1',
+          cardType: 'loyalty',
+          displayName: 'Coffee Loyalty',
+          createdAt: DateTime.utc(2026, 5, 13),
+          status: CardStatus.active,
+          businessName: 'Coffee Shop',
+          entriesTotal: 8,
+          entriesRemaining: 5,
+          scanValue: 1,
+          programType: 'stamps',
+          referralEnabled: true,
+        ),
+      );
+      await DriftWalletRepository(db).saveWalletCard(
+        WalletCard(
+          walletCardId: 'wallet-card-no-referral',
+          walletId: _testClientWalletId,
+          businessId: 'business-2',
+          cardId: 'loyalty-2',
+          cardType: 'loyalty',
+          displayName: 'Bakery Points',
+          createdAt: DateTime.utc(2026, 5, 13),
+          status: CardStatus.active,
+          businessName: 'Bakery',
+          entriesTotal: 8,
+          entriesRemaining: 5,
+          scanValue: 1,
+          programType: 'stamps',
+          referralEnabled: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            clientWalletIdProvider.overrideWith(
+              (ref) async => _testClientWalletId,
+            ),
+          ],
+          child: const LocalLoyaltyApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('My Cards'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Coffee Loyalty'));
+      await tester.pumpAndSettle();
+      expect(find.text('Refer a Friend'), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Bakery Points'));
+      await tester.pumpAndSettle();
+      expect(find.text('Refer a Friend'), findsNothing);
+    },
+  );
 
   testWidgets('client can update a wallet card locally after check-in', (
     tester,

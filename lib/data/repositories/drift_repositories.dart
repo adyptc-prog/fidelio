@@ -126,8 +126,8 @@ class DriftBusinessRepository implements BusinessRepository {
 INSERT OR REPLACE INTO business_profiles
 (business_id, display_name, created_at, activity_domain,
  phone, email, address, card_accent_color, activity_symbol,
- local_public_key)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ local_public_key, referral_program_enabled)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''',
       [
         profile.businessId,
@@ -140,6 +140,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         profile.cardAccentColor,
         profile.activitySymbol,
         profile.localPublicKey,
+        _bool(profile.referralProgramEnabled),
       ],
     );
   }
@@ -472,8 +473,10 @@ INSERT OR REPLACE INTO wallet_cards
  created_at, status, business_name, business_domain, business_symbol,
  business_accent_color, entries_total, entries_remaining, valid_until,
  scan_value, dynamic_challenge,
- challenge_timestamp, challenge_signature)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ challenge_timestamp, challenge_signature, program_type,
+ challenge_window_days, referral_enabled, referrer_card_id,
+ pending_activation)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''',
       [
         card.walletCardId,
@@ -495,6 +498,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         card.dynamicChallenge,
         _nullableDate(card.challengeTimestamp),
         card.challengeSignature,
+        card.programType,
+        card.challengeWindowDays,
+        _bool(card.referralEnabled),
+        card.referrerCardId,
+        _bool(card.pendingActivation),
       ],
     );
   }
@@ -771,6 +779,7 @@ BusinessProfile _businessFromRow(Map<String, Object?> row) {
     cardAccentColor: row['card_accent_color'] as int?,
     activitySymbol: row['activity_symbol'] as String?,
     localPublicKey: row['local_public_key'] as String?,
+    referralProgramEnabled: _readBool(row['referral_program_enabled']),
   );
 }
 
@@ -861,6 +870,11 @@ WalletCard _walletFromRow(Map<String, Object?> row) {
     dynamicChallenge: row['dynamic_challenge'] as String?,
     challengeTimestamp: _readNullableDate(row['challenge_timestamp']),
     challengeSignature: row['challenge_signature'] as String?,
+    programType: row['program_type'] as String?,
+    challengeWindowDays: row['challenge_window_days'] as int?,
+    referralEnabled: _readBool(row['referral_enabled']),
+    referrerCardId: row['referrer_card_id'] as String?,
+    pendingActivation: _readBool(row['pending_activation']),
   );
 }
 

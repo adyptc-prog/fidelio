@@ -5,6 +5,7 @@ import '../../domain/entities/business_profile.dart';
 import '../../domain/entities/loyalty_card.dart';
 import '../../domain/entities/subscription_card.dart';
 import '../../domain/entities/subscription_import_payload.dart';
+import '../../domain/entities/wallet_card.dart';
 import '../../domain/services/qr_service.dart';
 import '../../domain/value_objects/qr_challenge_payload.dart';
 
@@ -80,10 +81,91 @@ class LocalQrService implements QrService {
               .clamp(0, loyaltyCard.rewardThreshold)
               .toInt(),
       scanValue: loyaltyCard.pointsPerScan ?? 1,
+      programType: loyaltyCard.programType.name,
+      challengeWindowDays: loyaltyCard.challengeWindowDays,
+      referralProgramEnabled: business.referralProgramEnabled,
       issuedAt: DateTime.now(),
       cardType: 'loyalty',
     );
     return payload.copyWith(signature: _legacySubscriptionSignature(payload));
+  }
+
+  /// Builds a signed referral invite from the referrer's own [sourceCard].
+  /// The friend who imports it gets a brand-new card, pre-advanced by one
+  /// welcome-bonus step, that the business will register on first visit.
+  @override
+  SubscriptionImportPayload createReferralInvitePayload({
+    required WalletCard sourceCard,
+  }) {
+    final entriesTotal = sourceCard.entriesTotal;
+    final startingRemaining = entriesTotal == null
+        ? null
+        : (entriesTotal - 1).clamp(0, entriesTotal);
+    final payload = SubscriptionImportPayload(
+      type: subscriptionImportType,
+      version: subscriptionImportVersion,
+      businessId: sourceCard.businessId,
+      businessName: sourceCard.businessName ?? sourceCard.businessId,
+      businessDomain: sourceCard.businessDomain,
+      businessSymbol: sourceCard.businessSymbol,
+      businessAccentColor: sourceCard.businessAccentColor,
+      clientId: '',
+      subscriptionId: _newReferralCardId(),
+      cardTitle: sourceCard.displayName,
+      validFrom: DateTime.now(),
+      validUntil:
+          sourceCard.validUntil ??
+          DateTime.now().add(const Duration(days: 3650)),
+      entriesTotal: entriesTotal,
+      entriesRemaining: startingRemaining,
+      scanValue: sourceCard.scanValue,
+      programType: sourceCard.programType,
+      challengeWindowDays: sourceCard.challengeWindowDays,
+      referrerCardId: sourceCard.cardId,
+      referralProgramEnabled: sourceCard.referralEnabled,
+      cardType: 'loyalty',
+      issuedAt: DateTime.now(),
+    );
+    return payload.copyWith(signature: _legacySubscriptionSignature(payload));
+  }
+
+  /// Re-derives the same referral payload from an already-imported,
+  /// not-yet-activated [referredCard], so the friend can show it to the
+  /// business without needing the original raw QR text.
+  @override
+  SubscriptionImportPayload createReferralActivationPayload({
+    required WalletCard referredCard,
+  }) {
+    final payload = SubscriptionImportPayload(
+      type: subscriptionImportType,
+      version: subscriptionImportVersion,
+      businessId: referredCard.businessId,
+      businessName: referredCard.businessName ?? referredCard.businessId,
+      businessDomain: referredCard.businessDomain,
+      businessSymbol: referredCard.businessSymbol,
+      businessAccentColor: referredCard.businessAccentColor,
+      clientId: '',
+      subscriptionId: referredCard.cardId,
+      cardTitle: referredCard.displayName,
+      validFrom: DateTime.now(),
+      validUntil:
+          referredCard.validUntil ??
+          DateTime.now().add(const Duration(days: 3650)),
+      entriesTotal: referredCard.entriesTotal,
+      entriesRemaining: referredCard.entriesRemaining,
+      scanValue: referredCard.scanValue,
+      programType: referredCard.programType,
+      challengeWindowDays: referredCard.challengeWindowDays,
+      referrerCardId: referredCard.referrerCardId,
+      referralProgramEnabled: referredCard.referralEnabled,
+      cardType: 'loyalty',
+      issuedAt: DateTime.now(),
+    );
+    return payload.copyWith(signature: _legacySubscriptionSignature(payload));
+  }
+
+  String _newReferralCardId() {
+    return 'loyalty-referral-${DateTime.now().microsecondsSinceEpoch}-${_createNonce()}';
   }
 
   @override
@@ -272,6 +354,10 @@ class LocalQrService implements QrService {
       payload.entriesTotal?.toString() ?? '',
       payload.entriesRemaining?.toString() ?? '',
       payload.scanValue?.toString() ?? '',
+      payload.programType ?? '',
+      payload.challengeWindowDays?.toString() ?? '',
+      payload.referrerCardId ?? '',
+      payload.referralProgramEnabled.toString(),
       payload.issuedAt.toUtc().toIso8601String(),
     ].join('|');
     return _hmacSha256Hex(signatureKey, canonicalPayload);

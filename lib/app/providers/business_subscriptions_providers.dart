@@ -239,10 +239,12 @@ class BusinessSubscriptionActions {
     return updated;
   }
 
-  /// Grants a customer a birthday bonus entry on [loyaltyCardId] — a stamp,
-  /// a visit, or points, depending on the card's program type. Advances
-  /// progress exactly like a validated check-in scan, without requiring one.
-  Future<LoyaltyCard?> grantBirthdayReward(String loyaltyCardId) async {
+  /// Grants a bonus entry on [loyaltyCardId] — a stamp, a visit, or points,
+  /// depending on the card's program type. Advances progress exactly like a
+  /// validated check-in scan, without requiring one. Used for birthday
+  /// rewards and for rewarding a referrer when their friend's card is
+  /// registered.
+  Future<LoyaltyCard?> grantBonusEntry(String loyaltyCardId) async {
     final repository = _ref.read(cardRepositoryProvider);
     final card = await repository.getLoyaltyCard(loyaltyCardId);
     if (card == null || card.isCompleted) {

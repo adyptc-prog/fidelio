@@ -93,6 +93,12 @@ class ClientWalletImportController {
       entriesRemaining: payload.entriesRemaining,
       scanValue: payload.scanValue,
       validUntil: payload.validUntil,
+      programType: payload.programType,
+      challengeWindowDays: payload.challengeWindowDays,
+      referralEnabled: payload.referralProgramEnabled,
+      referrerCardId: existing?.referrerCardId ?? payload.referrerCardId,
+      pendingActivation:
+          existing?.pendingActivation ?? payload.isReferralInvite,
     );
 
     await repository.saveWalletCard(walletCard);
@@ -124,6 +130,24 @@ class ClientWalletImportController {
       entriesRemaining: (remaining - scanValue).clamp(0, remaining).toInt(),
       challengeTimestamp: DateTime.now(),
     );
+    await repository.saveWalletCard(updated);
+    _ref.invalidate(clientWalletCardsProvider);
+    _ref.invalidate(clientWalletCardProvider(walletCardId));
+    return updated;
+  }
+
+  /// Marks a referral-received card as activated, after the friend has
+  /// shown its activation QR to the business. Optimistic and local-only,
+  /// same pattern as [updateMyCard] — there's no live confirmation from the
+  /// business's device.
+  Future<WalletCard?> confirmReferralActivation(String walletCardId) async {
+    final repository = _ref.read(walletRepositoryProvider);
+    final card = await repository.getWalletCard(walletCardId);
+    if (card == null) {
+      return null;
+    }
+
+    final updated = card.copyWith(pendingActivation: false);
     await repository.saveWalletCard(updated);
     _ref.invalidate(clientWalletCardsProvider);
     _ref.invalidate(clientWalletCardProvider(walletCardId));
