@@ -26,7 +26,7 @@ Works for coffee shops, salons, restaurants, delivery services, gyms, and any bu
 - Validate access via **QR scan** or **NFC** (Android)
 - View full check-in history
 - **Daily automatic USB backup**
-- USB-C lifetime license for unlimited cards
+- Unlimited cards with an activation license (see [Free Tier & Activation License](#free-tier--activation-license))
 
 ### Client Mode
 - Import cards by scanning a business QR code or via NFC
@@ -48,16 +48,36 @@ All validation happens on-device. QR codes are time-limited and signed with HMAC
 
 ---
 
-## Free Tier & License
+## Free Tier & Activation License
+
+The complete source code — including the 10-card free limit — is published here under the AGPL-3.0.
+**The code is not sold**, and the rights the AGPL gives you (to use, study, modify and redistribute it)
+don't depend on buying anything.
+
+What is sold is an **activation license**: a signed file, tied to one Business ID, that unlocks the
+10-card limit in the Fidelio business app distributed by Volt Academy (the Android APK available at
+[voltacademy.app/fidelio.html](https://voltacademy.app/fidelio.html)).
 
 | Cards per business | Requirement |
 |---|---|
-| Up to 10 | Free forever |
-| Unlimited | USB-C lifetime license |
+| Up to 10 | Free |
+| Unlimited | Activation license — 30, 60 or 180 days, or permanent |
 
-To issue a license, place `fidelio_license.json` on a USB-C stick at `/Fidelio/fidelio_license.json`. The app detects it automatically on Android.
+Licenses are bought at [voltacademy.app/fidelio.html](https://voltacademy.app/fidelio.html#licentiere),
+where current prices are listed. Expirable licenses bought for the same Business ID add up, and the
+license becomes permanent automatically once their total reaches the price of a permanent license.
 
-License inquiries: **adyptc@gmail.com**
+To activate a license:
+
+1. Open the **License** screen in the app and copy your Business ID.
+2. Buy a license on the site with that Business ID and download `fidelio_license.json`.
+3. Back on the License screen, tap **Select License File** and pick the file from your phone storage
+   or from a USB-C stick. A file placed at `/Fidelio/fidelio_license.json` on a USB-C stick is also
+   detected automatically.
+
+The Fidelio client wallet apps on the App Store and Google Play are free and don't need a license.
+
+Questions about licenses: [voltacademy.app/contact.html](https://voltacademy.app/contact.html)
 
 ---
 
@@ -68,7 +88,7 @@ License inquiries: **adyptc@gmail.com**
 | QR scan & generate | ✅ | ✅ |
 | NFC access | ✅ | ❌ |
 | USB backup | ✅ | ❌ |
-| USB license | ✅ | ❌ |
+| License import (file or USB) | ✅ | ❌ |
 
 NFC and USB features use Android platform channels and are not available on iOS.
 
