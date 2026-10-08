@@ -1,7 +1,7 @@
 # Fidelio
 
 **Local loyalty and membership management for small businesses.**
-No server. No internet. No accounts.
+No server. Works offline. No accounts.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Flutter](https://img.shields.io/badge/Flutter-3.10%2B-02569B?logo=flutter)](https://flutter.dev)
@@ -33,6 +33,12 @@ Works for coffee shops, salons, restaurants, delivery services, gyms, and any bu
 - Wallet view in list or grid
 - Generate a **dynamic QR or NFC access code** for any card
 - Update card locally after each visit
+
+**Privacy note:** barcode and QR scanning uses Google ML Kit, which runs on the phone (camera images
+never leave it) but sends Google technical diagnostics and usage data (device and app information,
+performance, error codes), as described in
+[Google's ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure).
+It is the only reason the app has the Internet permission. Customer and card data never leave the phone.
 
 ---
 
