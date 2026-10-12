@@ -35,10 +35,11 @@ Works for coffee shops, salons, restaurants, delivery services, gyms, and any bu
 - Update card locally after each visit
 
 **Privacy note:** barcode and QR scanning uses Google ML Kit, which runs on the phone (camera images
-never leave it) but sends Google technical diagnostics and usage data (device and app information,
-performance, error codes), as described in
+never leave it). Since version 1.0.5 the app has no Internet permission: it is stripped from the merged
+manifest and the ML Kit telemetry backend is unregistered (see `android/app/src/main/AndroidManifest.xml`),
+so nothing can be sent off the phone. Earlier versions let ML Kit send Google technical diagnostics, as described in
 [Google's ML Kit data disclosure](https://developers.google.com/ml-kit/android-data-disclosure).
-It is the only reason the app has the Internet permission. Customer and card data never leave the phone.
+Customer and card data never leave the phone.
 
 ---
 
