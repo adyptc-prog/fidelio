@@ -5,6 +5,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../../domain/entities/customer_record.dart';
 import '../../domain/services/birthday_service.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 /// Schedules local, yearly-recurring notifications reminding the business
 /// when a customer has a birthday. Best-effort: any platform/permission
@@ -17,9 +18,9 @@ class BirthdayNotificationService {
   bool _initialized = false;
 
   static const _channelId = 'birthday_reminders';
-  static const _channelName = 'Birthday reminders';
-  static const _channelDescription =
-      'Reminders when a customer has a birthday.';
+  static String get _channelName => t('Birthday reminders');
+  static String get _channelDescription =>
+      t('Reminders when a customer has a birthday.');
 
   Future<void> _ensureInitialized() async {
     if (_initialized) {
@@ -51,7 +52,7 @@ class BirthdayNotificationService {
             AndroidFlutterLocalNotificationsPlugin
           >()
           ?.createNotificationChannel(
-            const AndroidNotificationChannel(
+            AndroidNotificationChannel(
               _channelId,
               _channelName,
               description: _channelDescription,
@@ -104,9 +105,10 @@ class BirthdayNotificationService {
         await _plugin.zonedSchedule(
           id: id,
           scheduledDate: scheduledDate,
-          title: "It's ${customer.displayName}'s birthday!",
-          body: 'Open Fidelio to offer a birthday reward.',
-          notificationDetails: const NotificationDetails(
+          title: tr('Azi e ziua lui ${customer.displayName}!',
+              "It's ${customer.displayName}'s birthday!"),
+          body: t('Open Fidelio to offer a birthday reward.'),
+          notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
               _channelId,
               _channelName,

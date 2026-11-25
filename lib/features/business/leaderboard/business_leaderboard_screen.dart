@@ -7,6 +7,7 @@ import '../../../domain/entities/customer_record.dart';
 import '../../../domain/services/customer_rank_service.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../../../presentation/widgets/customer_rank_badge.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessLeaderboardScreen extends ConsumerWidget {
   const BusinessLeaderboardScreen({super.key});
@@ -16,12 +17,12 @@ class BusinessLeaderboardScreen extends ConsumerWidget {
     final customersState = ref.watch(businessCustomersControllerProvider);
 
     return SectionShell(
-      title: 'Leaderboard',
+      title: t('Leaderboard'),
       child: customersState.when(
         data: (state) {
           if (state.customers.isEmpty) {
-            return const Center(
-              child: Text('No customers yet.', textAlign: TextAlign.center),
+            return Center(
+              child: Text(t('No customers yet.'), textAlign: TextAlign.center),
             );
           }
 
@@ -37,7 +38,7 @@ class BusinessLeaderboardScreen extends ConsumerWidget {
                   leading: CustomerRankBadge(rank: rank, iconSize: 28),
                   title: Text(customer.displayName),
                   subtitle: Text(
-                    '${rankLabel(rank)} · ${customer.rewardsEarned} rewards',
+                    tr('${rankLabel(rank)} · ${customer.rewardsEarned} recompense', '${rankLabel(rank)} · ${customer.rewardsEarned} rewards'),
                   ),
                   trailing: Text(
                     _lastVisitLabel(customer),
@@ -52,7 +53,7 @@ class BusinessLeaderboardScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load customers: $error')),
+            Center(child: Text(tr('Clienții nu au putut fi încărcați: $error', 'Could not load customers: $error'))),
       ),
     );
   }
@@ -61,9 +62,9 @@ class BusinessLeaderboardScreen extends ConsumerWidget {
 String _lastVisitLabel(CustomerRecord customer) {
   final lastVisitAt = customer.lastVisitAt;
   if (lastVisitAt == null) {
-    return 'Never visited';
+    return t('Never visited');
   }
-  return 'Last visit\n${_formatDate(lastVisitAt)}';
+  return tr('Ultima vizită\n${_formatDate(lastVisitAt)}', 'Last visit\n${_formatDate(lastVisitAt)}');
 }
 
 String _formatDate(DateTime value) {

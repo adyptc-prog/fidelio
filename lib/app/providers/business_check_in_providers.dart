@@ -20,6 +20,7 @@ import 'business_customers_providers.dart';
 import 'business_profile_providers.dart';
 import 'business_subscriptions_providers.dart';
 import 'qr_providers.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 /// Which kind of QR/NFC payload a raw scan turned out to be, used by the
 /// scanner UI to route to the right handler before doing any DB writes.
@@ -97,7 +98,7 @@ class BusinessCheckInController {
       return processDynamicChallenge(payload);
     }
 
-    throw const FormatException('Unsupported QR type.');
+    throw FormatException(t('Unsupported QR type.'));
   }
 
   /// Verifies a scanned referral invite without writing anything to the
@@ -295,9 +296,9 @@ class BusinessCheckInController {
   ) async {
     final business = await _ref.read(businessProfileControllerProvider.future);
     if (business == null) {
-      return const CheckInScanResult(
+      return CheckInScanResult(
         isValid: false,
-        message: 'Business profile is not configured.',
+        message: t('Business profile is not configured.'),
       );
     }
 
@@ -367,7 +368,7 @@ class BusinessCheckInController {
         await recordCustomerVisit(_ref, validSubscription.customerId);
         return CheckInScanResult(
           isValid: true,
-          message: 'Validated successfully',
+          message: t('Validated successfully'),
           subscription: validSubscription,
         );
       }
@@ -441,7 +442,7 @@ class BusinessCheckInController {
         message: switch (updatedProgress.outcome) {
           LoyaltyProgressOutcome.thresholdReached => 'threshold_reached',
           LoyaltyProgressOutcome.bonusConsumed => 'bonus_entry',
-          LoyaltyProgressOutcome.normal => 'Validated successfully',
+          LoyaltyProgressOutcome.normal => t('Validated successfully'),
         },
       );
     });

@@ -8,6 +8,7 @@ import '../../../app/providers/client_wallet_providers.dart';
 import '../../../domain/entities/wallet_card.dart';
 import '../../../domain/value_objects/card_status.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class ClientCardsScreen extends ConsumerWidget {
   const ClientCardsScreen({super.key});
@@ -20,13 +21,13 @@ class ClientCardsScreen extends ConsumerWidget {
         const AppSettings(selectedMode: null);
 
     return SectionShell(
-      title: 'My Cards',
+      title: t('My Cards'),
       child: cards.when(
         data: (cards) {
           if (cards.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'There are no cards in the wallet. Import a card received from a business.',
+                t('There are no cards in the wallet. Import a card received from a business.'),
                 textAlign: TextAlign.center,
               ),
             );
@@ -54,7 +55,7 @@ class ClientCardsScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load wallet: $error')),
+            Center(child: Text(tr('Portofelul nu a putut fi încărcat: $error', 'Could not load wallet: $error'))),
       ),
     );
   }
@@ -196,7 +197,7 @@ class _WalletPass extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       _PassInfo(
-                        label: 'Valid',
+                        label: t('Valid'),
                         value: _dateOrDash(card.validUntil),
                         alignEnd: true,
                       ),
@@ -359,15 +360,15 @@ IconData _businessIcon(WalletCard card) {
 
 String _detailLabel(WalletCard card) {
   if (card.cardType == 'loyalty') {
-    return card.entriesRemaining == null ? 'Type' : 'Progress';
+    return card.entriesRemaining == null ? t('Type') : t('Progress');
   }
-  return 'Entries';
+  return t('Entries');
 }
 
 String _detailValue(WalletCard card) {
   if (card.cardType == 'loyalty') {
     if (card.entriesRemaining == null || card.entriesTotal == null) {
-      return 'Loyalty';
+      return t('Loyalty');
     }
     final current = card.entriesTotal! - card.entriesRemaining!;
     return '$current/${card.entriesTotal}';
@@ -391,11 +392,11 @@ String _dateOrDash(DateTime? value) {
 
 String _statusLabel(CardStatus status) {
   return switch (status) {
-    CardStatus.active => 'active',
-    CardStatus.expired => 'expired',
-    CardStatus.suspended => 'suspended',
-    CardStatus.cancelled => 'cancelled',
-    CardStatus.draft => 'draft',
-    CardStatus.revoked => 'revoked',
+    CardStatus.active => t('Active'),
+    CardStatus.expired => t('Expired'),
+    CardStatus.suspended => t('Suspended'),
+    CardStatus.cancelled => t('Cancelled'),
+    CardStatus.draft => t('Draft'),
+    CardStatus.revoked => t('Revoked'),
   };
 }

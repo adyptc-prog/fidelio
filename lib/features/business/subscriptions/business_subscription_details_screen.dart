@@ -12,6 +12,7 @@ import '../../../domain/entities/subscription_card.dart';
 import '../../../domain/value_objects/card_status.dart';
 import '../../../domain/value_objects/subscription_type.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessSubscriptionDetailsScreen extends ConsumerWidget {
   const BusinessSubscriptionDetailsScreen({
@@ -27,18 +28,18 @@ class BusinessSubscriptionDetailsScreen extends ConsumerWidget {
     final business = ref.watch(businessProfileControllerProvider);
 
     return SectionShell(
-      title: 'Membership',
+      title: t('Membership'),
       child: subscription.when(
         data: (subscription) {
           if (subscription == null) {
-            return const Center(child: Text('Membership not found.'));
+            return Center(child: Text(t('Membership not found.')));
           }
 
           return business.when(
             data: (business) {
               if (business == null) {
-                return const Center(
-                  child: Text('Business profile is not configured.'),
+                return Center(
+                  child: Text(t('Business profile is not configured.')),
                 );
               }
               return _SubscriptionDetails(
@@ -48,12 +49,12 @@ class BusinessSubscriptionDetailsScreen extends ConsumerWidget {
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stackTrace) =>
-                Center(child: Text('Could not load business: $error')),
+                Center(child: Text(tr('Nu s-a putut încărca afacerea: $error', 'Could not load business: $error'))),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load membership: $error')),
+            Center(child: Text(tr('Abonamentul nu a putut fi încărcat: $error', 'Could not load membership: $error'))),
       ),
     );
   }
@@ -106,26 +107,26 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
                 ),
                 const SizedBox(height: 8),
                 _InfoLine(
-                  label: 'Type',
+                  label: t('Type'),
                   value: _typeLabel(widget.subscription.subscriptionType),
                 ),
-                _InfoLine(label: 'Status', value: _statusLabel(status)),
+                _InfoLine(label: t('Status'), value: _statusLabel(status)),
                 if (hasNoEntries)
-                  const _InfoLine(
-                    label: 'Scan',
-                    value: 'inavailable - no entries',
+                  _InfoLine(
+                    label: t('Scan'),
+                    value: t('inavailable - no entries'),
                   ),
                 _InfoLine(
-                  label: 'Valid',
+                  label: t('Valid'),
                   value:
                       '${_dateOrDash(widget.subscription.startsAt)} - ${_dateOrDash(widget.subscription.expiresAt)}',
                 ),
                 _InfoLine(
-                  label: 'Entries',
+                  label: t('Entries'),
                   value: widget.subscription.remainingUses?.toString() ?? '-',
                 ),
                 _InfoLine(
-                  label: 'Observatii',
+                  label: t('Observatii'),
                   value: widget.subscription.notes ?? '-',
                 ),
               ],
@@ -135,21 +136,21 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
         const SizedBox(height: 12),
         FilledButton.icon(
           icon: const Icon(Icons.qr_code_2),
-          label: const Text('Send to Client by QR'),
+          label: Text(t('Send to Client by QR')),
           onPressed: () => setState(() => _showQr = true),
         ),
         const SizedBox(height: 8),
         FilledButton.tonalIcon(
           icon: const Icon(Icons.nfc),
           label: Text(
-            _isWritingNfc ? 'Preparing NFC...' : 'Send to Client by NFC',
+            _isWritingNfc ? t('Preparing NFC...') : t('Send to Client by NFC'),
           ),
           onPressed: _isWritingNfc ? null : () => _writeNfc(qrData),
         ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.delete_outline),
-          label: Text(_isDeleting ? 'Deleting...' : 'Delete Membership'),
+          label: Text(_isDeleting ? t('Deleting...') : t('Delete Membership')),
           style: OutlinedButton.styleFrom(
             foregroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -166,8 +167,8 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Text(
-                    'The client scans this code from Client Mode to add the card to the wallet',
+                  Text(
+                    t('The client scans this code from Client Mode to add the card to the wallet'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -190,18 +191,18 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete membership?'),
-        content: const Text(
-          'Are you sure you want to permanently delete this membership from the local database?',
+        title: Text(t('Delete membership?')),
+        content: Text(
+          t('Are you sure you want to permanently delete this membership from the local database?'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: Text(t('Delete')),
           ),
         ],
       ),
@@ -223,7 +224,7 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not delete membership: $error')),
+        SnackBar(content: Text(tr('Abonamentul nu a putut fi șters: $error', 'Could not delete membership: $error'))),
       );
     } finally {
       if (mounted) {
@@ -236,7 +237,7 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
     setState(() {
       _isWritingNfc = true;
       _nfcMessage =
-          'Waiting for the client phone. Ask the client to tap Import by NFC and hold it near this device.';
+          t('Waiting for the client phone. Ask the client to tap Import by NFC and hold it near this device.');
     });
 
     try {
@@ -245,13 +246,13 @@ class _SubscriptionDetailsState extends ConsumerState<_SubscriptionDetails> {
         return;
       }
       setState(
-        () => _nfcMessage = 'Card sent by NFC.',
+        () => _nfcMessage = t('Card sent by NFC.'),
       );
     } on Object catch (error) {
       if (!mounted) {
         return;
       }
-      setState(() => _nfcMessage = 'NFC export failed: $error');
+      setState(() => _nfcMessage = tr('Trimiterea prin NFC a eșuat: $error', 'NFC export failed: $error'));
     } finally {
       if (mounted) {
         setState(() => _isWritingNfc = false);
@@ -295,19 +296,19 @@ String _dateOrDash(DateTime? value) {
 
 String _typeLabel(SubscriptionType type) {
   return switch (type) {
-    SubscriptionType.monthly => 'monthly',
-    SubscriptionType.entries => 'entry count',
-    SubscriptionType.custom => 'custom',
+    SubscriptionType.monthly => t('Monthly'),
+    SubscriptionType.entries => t('Entry count'),
+    SubscriptionType.custom => t('Custom'),
   };
 }
 
 String _statusLabel(CardStatus status) {
   return switch (status) {
-    CardStatus.active => 'active',
-    CardStatus.expired => 'expired',
-    CardStatus.suspended => 'suspended',
-    CardStatus.cancelled => 'cancelled',
-    CardStatus.draft => 'draft',
-    CardStatus.revoked => 'revoked',
+    CardStatus.active => t('Active'),
+    CardStatus.expired => t('Expired'),
+    CardStatus.suspended => t('Suspended'),
+    CardStatus.cancelled => t('Cancelled'),
+    CardStatus.draft => t('Draft'),
+    CardStatus.revoked => t('Revoked'),
   };
 }

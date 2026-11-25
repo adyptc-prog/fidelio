@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/route_names.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class ClientWalletScreen extends StatelessWidget {
   const ClientWalletScreen({super.key});
@@ -10,11 +11,11 @@ class ClientWalletScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SectionShell(
-      title: 'Client Mode',
+      title: t('Client Mode'),
       showBackButton: false,
       actions: [
         IconButton(
-          tooltip: 'Settings',
+          tooltip: t('Settings'),
           icon: const Icon(Icons.settings),
           onPressed: () => context.push(RouteNames.clientSettings),
         ),
@@ -30,13 +31,13 @@ class ClientWalletScreen extends StatelessWidget {
             childAspectRatio: 1,
             children: [
               _ClientActionTile(
-                title: 'My Cards',
+                title: t('My Cards'),
                 icon: Icons.credit_card,
                 colors: const [Color(0xFF0B3B34), Color(0xFF16705F)],
                 onTap: () => context.push(RouteNames.clientCards),
               ),
               _ClientActionTile(
-                title: 'Import Card',
+                title: t('Import Card'),
                 icon: Icons.file_download,
                 colors: const [Color(0xFF123A52), Color(0xFF2A7C96)],
                 onTap: () => context.push(RouteNames.clientImportCard),
@@ -49,7 +50,7 @@ class ClientWalletScreen extends StatelessWidget {
             height: 56,
             child: FilledButton.icon(
               icon: const Icon(Icons.campaign),
-              label: const Text('Recommend Fidelio'),
+              label: Text(t('Recommend Fidelio')),
               onPressed: () => context.push(RouteNames.clientRecommend),
             ),
           ),

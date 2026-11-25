@@ -12,6 +12,7 @@ import '../../domain/value_objects/subscription_type.dart';
 import 'app_settings_providers.dart';
 import 'business_customers_providers.dart';
 import 'license_providers.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 final cardRepositoryProvider = Provider<CardRepository>((ref) {
   return DriftCardRepository(ref.watch(appDatabaseProvider));
@@ -298,6 +299,18 @@ class BusinessSubscriptionActions {
     }
   }
 
+  /// true dacă se mai poate crea un card (sub limita gratuită sau cu
+  /// licență activă). Verificat înainte de a deschide formularul, ca
+  /// utilizatorul să nu-l completeze degeaba.
+  Future<bool> canCreateCard(String businessId) async {
+    try {
+      await _ensureCanCreateCard(businessId);
+      return true;
+    } on LicenseRequiredException {
+      return false;
+    }
+  }
+
   Future<LicenseStatus?> _ensureCanCreateCard(String businessId) async {
     final count = await _ref.read(businessCardCountProvider(businessId).future);
     if (count < 10) {
@@ -309,7 +322,7 @@ class BusinessSubscriptionActions {
     );
     if (!license.isActive) {
       throw LicenseRequiredException(
-        'Free limit reached. Insert the licensed USB-C stick to create more cards.',
+        t('Free limit reached. Insert the licensed USB-C stick to create more cards.'),
       );
     }
     return license;
@@ -319,9 +332,9 @@ class BusinessSubscriptionActions {
     if (license == null || !license.isExpiringSoon) return null;
     final days = license.daysUntilExpiry!;
     if (days <= 1) {
-      return 'License expires tomorrow! Renew to avoid interruptions.';
+      return t('License expires tomorrow! Renew to avoid interruptions.');
     }
-    return 'License expires in $days days. Renew to avoid interruptions.';
+    return tr('Licența expiră în $days zile. Reînnoiește ca să eviți întreruperile.', 'License expires in $days days. Renew to avoid interruptions.');
   }
 
   static String _newSubscriptionId() {

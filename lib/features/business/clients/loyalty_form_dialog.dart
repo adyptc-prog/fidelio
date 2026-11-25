@@ -5,6 +5,7 @@ import '../../../app/providers/business_subscriptions_providers.dart';
 import '../../../domain/entities/customer_record.dart';
 import '../../../domain/value_objects/loyalty_program_type.dart';
 import 'license_required_dialog.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 Future<void> showLoyaltyFormDialog(
   BuildContext context, {
@@ -27,7 +28,7 @@ class _LoyaltyFormDialog extends ConsumerStatefulWidget {
 
 class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Loyalty Card');
+  final _nameController = TextEditingController(text: t('Loyalty Card'));
   final _thresholdController = TextEditingController(text: '8');
   final _pointsPerScanController = TextEditingController(text: '10');
   final _windowDaysController = TextEditingController(text: '30');
@@ -58,7 +59,7 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create Loyalty Card'),
+      title: Text(t('Create Loyalty Card')),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -69,8 +70,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Card Name',
+                  decoration: InputDecoration(
+                    labelText: t('Card Name'),
                     border: OutlineInputBorder(),
                   ),
                   validator: _required,
@@ -78,8 +79,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<LoyaltyProgramType>(
                   initialValue: _programType,
-                  decoration: const InputDecoration(
-                    labelText: 'Loyalty Program Type',
+                  decoration: InputDecoration(
+                    labelText: t('Loyalty Program Type'),
                     border: OutlineInputBorder(),
                   ),
                   items: LoyaltyProgramType.values
@@ -104,8 +105,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
                 if (_programType == LoyaltyProgramType.points) ...[
                   TextFormField(
                     controller: _pointsPerScanController,
-                    decoration: const InputDecoration(
-                      labelText: 'Points awarded per scan',
+                    decoration: InputDecoration(
+                      labelText: t('Points awarded per scan'),
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
@@ -116,8 +117,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
                 if (_programType == LoyaltyProgramType.visitChallenge) ...[
                   TextFormField(
                     controller: _windowDaysController,
-                    decoration: const InputDecoration(
-                      labelText: 'Challenge period in days',
+                    decoration: InputDecoration(
+                      labelText: t('Challenge period in days'),
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
@@ -127,8 +128,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
                 ],
                 TextFormField(
                   controller: _thresholdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Reward Threshold',
+                  decoration: InputDecoration(
+                    labelText: t('Reward Threshold'),
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -138,8 +139,8 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
                 TextFormField(
                   controller: _startsAtController,
                   readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Valid From',
+                  decoration: InputDecoration(
+                    labelText: t('Valid From'),
                     border: OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                   ),
@@ -150,7 +151,7 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
                   controller: _validUntilController,
                   readOnly: true,
                   decoration: InputDecoration(
-                    labelText: 'Valid Until (optional)',
+                    labelText: t('Valid Until (optional)'),
                     border: const OutlineInputBorder(),
                     suffixIcon: _validUntil == null
                         ? const Icon(Icons.calendar_today)
@@ -174,11 +175,11 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(t('Cancel')),
         ),
         FilledButton(
           onPressed: _isSaving ? null : _save,
-          child: Text(_isSaving ? 'Saving...' : 'Save'),
+          child: Text(_isSaving ? t('Saving...') : t('Save')),
         ),
       ],
     );
@@ -243,17 +244,23 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
         _isSaving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save loyalty card: $error')),
+        SnackBar(content: Text(tr('Cardul de fidelitate nu a putut fi salvat: $error', 'Could not save loyalty card: $error'))),
       );
     }
   }
 
   Future<void> _pickDate({required bool isStart}) async {
-    final initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    // Sfârșitul nu poate fi înaintea începutului: calendarul pentru
+    // sfârșit începe de la data de început.
+    final startDay = DateUtils.dateOnly(_startsAt);
+    var initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    if (!isStart && initialDate.isBefore(startDay)) {
+      initialDate = startDay;
+    }
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(2020),
+      firstDate: isStart ? DateTime(2020) : startDay,
       lastDate: DateTime(2100),
     );
     if (picked == null) {
@@ -275,13 +282,13 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
   void _syncDateControllers() {
     _startsAtController.text = _formatDate(_startsAt);
     _validUntilController.text = _validUntil == null
-        ? 'No expiration'
+        ? t('No expiration')
         : _formatDate(_validUntil!);
   }
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Required field.';
+      return t('Required field.');
     }
     return null;
   }
@@ -289,7 +296,7 @@ class _LoyaltyFormDialogState extends ConsumerState<_LoyaltyFormDialog> {
   String? _positiveNomber(String? value) {
     final parsed = int.tryParse(value ?? '');
     if (parsed == null || parsed <= 0) {
-      return 'Enter a positive number.';
+      return t('Enter a positive number.');
     }
     return null;
   }
@@ -303,10 +310,10 @@ String _formatDate(DateTime value) {
 
 String _programTypeLabel(LoyaltyProgramType type) {
   return switch (type) {
-    LoyaltyProgramType.stamps => 'Stamps',
-    LoyaltyProgramType.points => 'Points per Visit',
-    LoyaltyProgramType.visitChallenge => 'Visit Challenge',
-    LoyaltyProgramType.delivery => 'Delivery',
+    LoyaltyProgramType.stamps => t('Stamps'),
+    LoyaltyProgramType.points => t('Points per Visit'),
+    LoyaltyProgramType.visitChallenge => t('Visit Challenge'),
+    LoyaltyProgramType.delivery => t('Delivery'),
   };
 }
 

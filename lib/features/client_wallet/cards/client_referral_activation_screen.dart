@@ -7,6 +7,7 @@ import '../../../app/providers/client_wallet_providers.dart';
 import '../../../app/providers/qr_providers.dart';
 import '../../../domain/entities/wallet_card.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 /// Shown for a referral-received card that hasn't been scanned in by the
 /// business yet. Displays the same signed invite so the business can
@@ -32,11 +33,11 @@ class _ClientReferralActivationScreenState
     final card = ref.watch(clientWalletCardProvider(widget.walletCardId));
 
     return SectionShell(
-      title: 'Activate Card',
+      title: t('Activate Card'),
       child: card.when(
         data: (card) {
           if (card == null) {
-            return const Center(child: Text('Card not found.'));
+            return Center(child: Text(t('Card not found.')));
           }
           if (_qrData == null && _errorMessage == null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -56,7 +57,7 @@ class _ClientReferralActivationScreenState
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load card: $error')),
+            Center(child: Text(tr('Cardul nu a putut fi încărcat: $error', 'Could not load card: $error'))),
       ),
     );
   }
@@ -81,7 +82,7 @@ class _ClientReferralActivationScreenState
       }
       setState(() {
         _qrData = null;
-        _errorMessage = 'Could not generate the activation code: $error';
+        _errorMessage = tr('Codul de activare nu a putut fi generat: $error', 'Could not generate the activation code: $error');
       });
     }
   }
@@ -102,7 +103,7 @@ class _ClientReferralActivationScreenState
       setState(() => _isConfirming = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not update card: $error')));
+      ).showSnackBar(SnackBar(content: Text(tr('Cardul nu a putut fi actualizat: $error', 'Could not update card: $error'))));
     }
   }
 }
@@ -149,12 +150,14 @@ class _ActivationContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const Card(
+        Card(
           child: Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              'This card was shared by a friend. Show this code to the '
-              'business on your first visit so they can activate it.',
+              tr('Cardul ți-a fost trimis de un prieten. Arată acest cod la '
+                  'prima vizită, ca afacerea să-l activeze.',
+                  'This card was shared by a friend. Show this code to the '
+                  'business on your first visit so they can activate it.'),
               textAlign: TextAlign.center,
             ),
           ),
@@ -170,7 +173,7 @@ class _ActivationContent extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
+                    label: Text(t('Try again')),
                     onPressed: onRetry,
                   ),
                 ] else if (qrData == null) ...[
@@ -179,8 +182,8 @@ class _ActivationContent extends StatelessWidget {
                     child: CircularProgressIndicator(),
                   ),
                 ] else ...[
-                  const Text(
-                    'Show this code for scanning.',
+                  Text(
+                    t('Show this code for scanning.'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -198,7 +201,7 @@ class _ActivationContent extends StatelessWidget {
         const SizedBox(height: 12),
         FilledButton.icon(
           icon: const Icon(Icons.done_all),
-          label: Text(isConfirming ? 'Updating...' : 'I showed this — Done'),
+          label: Text(isConfirming ? t('Updating...') : t('I showed this — Done')),
           onPressed: onConfirm,
         ),
       ],

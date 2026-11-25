@@ -8,6 +8,7 @@ import '../../domain/entities/subscription_import_payload.dart';
 import '../../domain/entities/wallet_card.dart';
 import '../../domain/services/qr_service.dart';
 import '../../domain/value_objects/qr_challenge_payload.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class LocalQrService implements QrService {
   const LocalQrService({
@@ -177,33 +178,33 @@ class LocalQrService implements QrService {
   SubscriptionImportPayload decodeSubscriptionImportPayload(String rawPayload) {
     final decoded = jsonDecode(rawPayload);
     if (decoded is! Map<String, Object?>) {
-      throw const FormatException('QR Payload invalid.');
+      throw FormatException(t('QR Payload invalid.'));
     }
 
     final payload = SubscriptionImportPayload.fromJson(decoded);
     if (payload.type != subscriptionImportType) {
-      throw const FormatException('Type QR invalid.');
+      throw FormatException(t('Type QR invalid.'));
     }
     if (payload.version != subscriptionImportVersion) {
-      throw const FormatException('Unsupported QR version.');
+      throw FormatException(t('Unsupported QR version.'));
     }
     if (payload.subscriptionId.trim().isEmpty) {
-      throw const FormatException('Missing subscriptionId.');
+      throw FormatException(t('Missing subscriptionId.'));
     }
     if (payload.businessId.trim().isEmpty) {
-      throw const FormatException('Missing businessId.');
+      throw FormatException(t('Missing businessId.'));
     }
     if (payload.cardType != 'subscription' && payload.cardType != 'loyalty') {
-      throw const FormatException('Type card invalid.');
+      throw FormatException(t('Type card invalid.'));
     }
     if (payload.signature == null || payload.signature!.trim().isEmpty) {
-      throw const FormatException('Missing signature.');
+      throw FormatException(t('Missing signature.'));
     }
     if (!_constantTimeEquals(
       payload.signature!,
       _legacySubscriptionSignature(payload),
     )) {
-      throw const FormatException('Invalid signature.');
+      throw FormatException(t('Invalid signature.'));
     }
 
     return payload;
@@ -215,10 +216,10 @@ class LocalQrService implements QrService {
     required String cardId,
   }) async {
     if (walletId.trim().isEmpty) {
-      throw ArgumentError.value(walletId, 'walletId', 'Wallet ID is required.');
+      throw ArgumentError.value(walletId, 'walletId', t('Wallet ID is required.'));
     }
     if (cardId.trim().isEmpty) {
-      throw ArgumentError.value(cardId, 'cardId', 'Card ID is required.');
+      throw ArgumentError.value(cardId, 'cardId', t('Card ID is required.'));
     }
 
     final timestamp = _now();
@@ -250,27 +251,27 @@ class LocalQrService implements QrService {
   QrChallengePayload decodeDynamicChallenge(String rawPayload) {
     final decoded = jsonDecode(rawPayload);
     if (decoded is! Map<String, Object?>) {
-      throw const FormatException('QR Payload invalid.');
+      throw FormatException(t('QR Payload invalid.'));
     }
 
     final payload = QrChallengePayload.fromJson(decoded);
     if (payload.type != dynamicChallengeType) {
-      throw const FormatException('Type QR invalid.');
+      throw FormatException(t('Type QR invalid.'));
     }
     if (payload.version != dynamicChallengeVersion) {
-      throw const FormatException('Unsupported QR version.');
+      throw FormatException(t('Unsupported QR version.'));
     }
     if (payload.walletId.trim().isEmpty) {
-      throw const FormatException('Missing walletId.');
+      throw FormatException(t('Missing walletId.'));
     }
     if (payload.cardId.trim().isEmpty) {
-      throw const FormatException('Missing cardId.');
+      throw FormatException(t('Missing cardId.'));
     }
     if (payload.dynamicChallenge.trim().isEmpty) {
-      throw const FormatException('Missing dynamicChallenge.');
+      throw FormatException(t('Missing dynamicChallenge.'));
     }
     if (payload.signature.trim().isEmpty) {
-      throw const FormatException('Missing signature.');
+      throw FormatException(t('Missing signature.'));
     }
 
     return payload;

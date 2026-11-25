@@ -9,6 +9,8 @@ import '../../../domain/entities/app_settings.dart';
 import '../../../domain/value_objects/app_mode.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../../../presentation/widgets/change_app_mode_tile.dart';
+import 'package:fidelio/app/localization/app_language.dart';
+import 'package:fidelio/presentation/widgets/language_tile.dart';
 
 class BusinessSettingsScreen extends ConsumerWidget {
   const BusinessSettingsScreen({super.key});
@@ -22,14 +24,14 @@ class BusinessSettingsScreen extends ConsumerWidget {
     final business = ref.watch(businessProfileControllerProvider);
 
     return SectionShell(
-      title: 'Business Settings',
+      title: t('Business Settings'),
       child: ListView(
         children: [
           Card(
             child: ListTile(
               leading: const Icon(Icons.storefront),
-              title: const Text('Business Details'),
-              subtitle: const Text('Profile, contact, address and card color'),
+              title: Text(t('Business Details')),
+              subtitle: Text(t('Profile, contact, address and card color')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(RouteNames.businessProfileSettings),
             ),
@@ -38,8 +40,8 @@ class BusinessSettingsScreen extends ConsumerWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.verified),
-              title: const Text('License'),
-              subtitle: const Text('USB-C lifetime license status'),
+              title: Text(t('License')),
+              subtitle: Text(t('USB-C lifetime license status')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(RouteNames.businessLicense),
             ),
@@ -48,8 +50,8 @@ class BusinessSettingsScreen extends ConsumerWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.backup),
-              title: const Text('Backup & Restore'),
-              subtitle: const Text('Save and restore data from USB-C'),
+              title: Text(t('Backup & Restore')),
+              subtitle: Text(t('Save and restore data from USB-C')),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => context.push(RouteNames.businessBackup),
             ),
@@ -62,21 +64,21 @@ class BusinessSettingsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Customer View',
+                    t('Customer View'),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
                   SegmentedButton<BusinessClientsViewMode>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: BusinessClientsViewMode.grid,
                         icon: Icon(Icons.grid_view),
-                        label: Text('Grid'),
+                        label: Text(t('Grid')),
                       ),
                       ButtonSegment(
                         value: BusinessClientsViewMode.list,
                         icon: Icon(Icons.view_agenda),
-                        label: Text('List'),
+                        label: Text(t('List')),
                       ),
                     ],
                     selected: {current.businessClientsViewMode},
@@ -95,19 +97,19 @@ class BusinessSettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Zoom', style: Theme.of(context).textTheme.titleMedium),
+                  Text(t('Zoom'), style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
                   SegmentedButton<AppZoomMode>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: AppZoomMode.normal,
                         icon: Icon(Icons.text_fields),
-                        label: Text('Normal'),
+                        label: Text(t('Normal')),
                       ),
                       ButtonSegment(
                         value: AppZoomMode.large,
                         icon: Icon(Icons.format_size),
-                        label: Text('Large'),
+                        label: Text(t('Large')),
                       ),
                     ],
                     selected: {current.zoomMode},
@@ -123,7 +125,7 @@ class BusinessSettingsScreen extends ConsumerWidget {
           Card(
             child: SwitchListTile(
               secondary: const Icon(Icons.dark_mode),
-              title: const Text('Dark Mode'),
+              title: Text(t('Dark Mode')),
               value: current.darkMode,
               onChanged: controller.setDarkMode,
             ),
@@ -132,9 +134,9 @@ class BusinessSettingsScreen extends ConsumerWidget {
           Card(
             child: SwitchListTile(
               secondary: const Icon(Icons.share),
-              title: const Text('Referral Program'),
-              subtitle: const Text(
-                'Let customers refer a friend for a reward on their loyalty card',
+              title: Text(t('Referral Program')),
+              subtitle: Text(
+                t('Let customers refer a friend for a reward on their loyalty card'),
               ),
               value: business.valueOrNull?.referralProgramEnabled ?? false,
               onChanged: business.valueOrNull == null
@@ -145,6 +147,7 @@ class BusinessSettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
+          const LanguageTile(),          const SizedBox(height: 12),
           const ChangeAppModeTile(currentMode: AppMode.business),
         ],
       ),

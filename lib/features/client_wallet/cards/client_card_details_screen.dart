@@ -7,6 +7,7 @@ import '../../../core/constants/route_names.dart';
 import '../../../domain/entities/wallet_card.dart';
 import '../../../domain/value_objects/card_status.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class ClientCardDetailsScreen extends ConsumerWidget {
   const ClientCardDetailsScreen({required this.walletCardId, super.key});
@@ -18,11 +19,11 @@ class ClientCardDetailsScreen extends ConsumerWidget {
     final card = ref.watch(clientWalletCardProvider(walletCardId));
 
     return SectionShell(
-      title: 'Card Details',
+      title: t('Card Details'),
       child: card.when(
         data: (card) {
           if (card == null) {
-            return const Center(child: Text('Card not found.'));
+            return Center(child: Text(t('Card not found.')));
           }
           return _CardDetails(
             card: card,
@@ -55,7 +56,7 @@ class ClientCardDetailsScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load card details: $error')),
+            Center(child: Text(tr('Detaliile cardului nu au putut fi încărcate: $error', 'Could not load card details: $error'))),
       ),
     );
   }
@@ -72,18 +73,18 @@ class ClientCardDetailsScreen extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete card?'),
-        content: const Text(
-          'The card will be removed from the client local wallet.',
+        title: Text(t('Delete card?')),
+        content: Text(
+          t('The card will be removed from the client local wallet.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: Text(t('Delete')),
           ),
         ],
       ),
@@ -144,26 +145,28 @@ class _CardDetails extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                _InfoLine(label: 'Status', value: _statusLabel(card.status)),
-                _InfoLine(label: 'Valid', value: _dateOrDash(card.validUntil)),
+                _InfoLine(label: t('Status'), value: _statusLabel(card.status)),
+                _InfoLine(label: t('Valid'), value: _dateOrDash(card.validUntil)),
                 if (card.entriesRemaining != null)
                   _InfoLine(
-                    label: card.cardType == 'loyalty' ? 'Progress' : 'Entries',
+                    label: card.cardType == 'loyalty' ? t('Progress') : t('Entries'),
                     value: _entriesLabel(card),
                   ),
-                _InfoLine(label: 'Card ID', value: card.cardId),
+                _InfoLine(label: t('Card ID'), value: card.cardId),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
         if (card.pendingActivation) ...[
-          const Card(
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'This card was shared by a friend. Activate it on your '
-                'first visit to the business.',
+                tr('Cardul ți-a fost trimis de un prieten. Activează-l la '
+                    'prima vizită la afacere.',
+                    'This card was shared by a friend. Activate it on your '
+                    'first visit to the business.'),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -171,26 +174,26 @@ class _CardDetails extends StatelessWidget {
           const SizedBox(height: 8),
           FilledButton.icon(
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Activate at Business'),
+            label: Text(t('Activate at Business')),
             onPressed: onActivate,
           ),
         ] else ...[
           FilledButton.icon(
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Generate QR Code'),
+            label: Text(t('Generate QR Code')),
             onPressed: onShowQr,
           ),
           const SizedBox(height: 8),
           FilledButton.tonalIcon(
             icon: const Icon(Icons.nfc),
-            label: const Text('NFC'),
+            label: Text(t('NFC')),
             onPressed: onWriteNfc,
           ),
           if (onRefer != null) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(
               icon: const Icon(Icons.share),
-              label: const Text('Refer a Friend'),
+              label: Text(t('Refer a Friend')),
               onPressed: onRefer,
             ),
           ],
@@ -198,13 +201,13 @@ class _CardDetails extends StatelessWidget {
         const SizedBox(height: 8),
         OutlinedButton.icon(
           icon: const Icon(Icons.delete_outline),
-          label: const Text('Delete Card'),
+          label: Text(t('Delete Card')),
           onPressed: onDelete,
         ),
         if (card.status != CardStatus.active) ...[
           const SizedBox(height: 8),
-          const Text(
-            'Access is available only for active cards.',
+          Text(
+            t('Access is available only for active cards.'),
             textAlign: TextAlign.center,
           ),
         ],
@@ -248,12 +251,12 @@ String _dateOrDash(DateTime? value) {
 
 String _statusLabel(CardStatus status) {
   return switch (status) {
-    CardStatus.active => 'active',
-    CardStatus.expired => 'expired',
-    CardStatus.suspended => 'suspended',
-    CardStatus.cancelled => 'cancelled',
-    CardStatus.draft => 'draft',
-    CardStatus.revoked => 'revoked',
+    CardStatus.active => t('Active'),
+    CardStatus.expired => t('Expired'),
+    CardStatus.suspended => t('Suspended'),
+    CardStatus.cancelled => t('Cancelled'),
+    CardStatus.draft => t('Draft'),
+    CardStatus.revoked => t('Revoked'),
   };
 }
 

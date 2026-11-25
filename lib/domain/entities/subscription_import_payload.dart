@@ -1,4 +1,5 @@
-class SubscriptionImportPayload {
+
+import 'package:fidelio/app/localization/app_language.dart';class SubscriptionImportPayload {
   const SubscriptionImportPayload({
     required this.type,
     required this.version,
@@ -145,7 +146,7 @@ class SubscriptionImportPayload {
 
   static DateTime _parseDate(Object? value) {
     if (value is! String) {
-      throw const FormatException('Invalid date field in QR payload.');
+      throw FormatException(t('Invalid date field in QR payload.'));
     }
     return DateTime.parse(value);
   }

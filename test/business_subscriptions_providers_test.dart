@@ -84,8 +84,8 @@ void main() {
       final cards = await DriftCardRepository(
         db,
       ).listLoyaltyCards('business-1');
-      expect(cards.single.startsAt, startsAt);
-      expect(cards.single.validUntil, validUntil);
+      expect(cards.single.startsAt, sameMoment(startsAt));
+      expect(cards.single.validUntil, sameMoment(validUntil));
     });
 
     test('updateLoyaltyCardValidity persists new dates', () async {
@@ -117,8 +117,8 @@ void main() {
       final reloaded = await DriftCardRepository(
         db,
       ).getLoyaltyCard(created.cardId);
-      expect(reloaded?.startsAt, newStartsAt);
-      expect(reloaded?.validUntil, newValidUntil);
+      expect(reloaded?.startsAt, sameMoment(newStartsAt));
+      expect(reloaded?.validUntil, sameMoment(newValidUntil));
     });
 
     test('updateLoyaltyCardValidity can clear the expiration date', () async {
@@ -380,3 +380,10 @@ void main() {
     );
   });
 }
+
+/// Aceeași clipă, indiferent dacă data e UTC sau locală (baza de date
+/// întoarce datele în ora locală).
+Matcher sameMoment(DateTime expected) => predicate<DateTime?>(
+  (actual) => actual != null && actual.isAtSameMomentAs(expected),
+  'same moment as $expected',
+);

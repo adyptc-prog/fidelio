@@ -8,6 +8,7 @@ import '../../../app/providers/qr_providers.dart';
 import '../../../domain/entities/wallet_card.dart';
 import '../../../domain/value_objects/card_status.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class ClientDynamicQrScreen extends ConsumerStatefulWidget {
   const ClientDynamicQrScreen({super.key});
@@ -31,21 +32,21 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
     final cards = ref.watch(clientWalletCardsProvider);
 
     return SectionShell(
-      title: 'Dynamic QR/NFC',
+      title: t('Dynamic QR/NFC'),
       child: cards.when(
         data: _buildLoaded,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load wallet: $error')),
+            Center(child: Text(tr('Portofelul nu a putut fi încărcat: $error', 'Could not load wallet: $error'))),
       ),
     );
   }
 
   Widget _buildLoaded(List<WalletCard> cards) {
     if (cards.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'There are no cards in the wallet. Import a card before generating a QR.',
+          t('There are no cards in the wallet. Import a card before generating a QR.'),
           textAlign: TextAlign.center,
         ),
       );
@@ -69,7 +70,7 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Card', style: Theme.of(context).textTheme.labelLarge),
+                Text(t('Card'), style: Theme.of(context).textTheme.labelLarge),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: selectedCard.walletCardId,
@@ -101,12 +102,12 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                _InfoLine(label: 'Status', value: _statusLabel(selectedCard)),
+                _InfoLine(label: t('Status'), value: _statusLabel(selectedCard)),
                 _InfoLine(
-                  label: 'Business',
+                  label: t('Business'),
                   value: selectedCard.businessName ?? selectedCard.businessId,
                 ),
-                _InfoLine(label: 'Card ID', value: selectedCard.cardId),
+                _InfoLine(label: t('Card ID'), value: selectedCard.cardId),
               ],
             ),
           ),
@@ -114,7 +115,7 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
         const SizedBox(height: 12),
         FilledButton.icon(
           icon: const Icon(Icons.refresh),
-          label: const Text('Generate Dynamic QR'),
+          label: Text(t('Generate Dynamic QR')),
           onPressed: canGenerate && !_isGenerating
               ? () => _generateQr(selectedCard)
               : null,
@@ -123,7 +124,7 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
         FilledButton.tonalIcon(
           icon: const Icon(Icons.nfc),
           label: Text(
-            _isWritingNfc ? 'Preparing NFC...' : 'Share Dynamic NFC',
+            _isWritingNfc ? t('Preparing NFC...') : t('Share Dynamic NFC'),
           ),
           onPressed: canGenerate && !_isGenerating && !_isWritingNfc
               ? () => _writeDynamicNfc(selectedCard)
@@ -135,11 +136,11 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
         ],
         const SizedBox(height: 16),
         if (!canGenerate)
-          const Card(
+          Card(
             child: Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'QR is available only for active cards.',
+                t('QR is available only for active cards.'),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -204,7 +205,7 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
         _qrData = null;
         _issuedAt = null;
         _isGenerating = false;
-        _errorMessage = 'Could not generate QR: $error';
+        _errorMessage = tr('Codul QR nu a putut fi generat: $error', 'Could not generate QR: $error');
       });
     }
   }
@@ -231,7 +232,7 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
       setState(() {
         _issuedAt = payload.timestamp;
         _nfcMessage =
-            'Dynamic NFC access is ready at ${_timeLabel(payload.timestamp)}. Hold this phone near the business tablet.';
+            tr('Accesul NFC dinamic e gata la ${_timeLabel(payload.timestamp)}. Ține telefonul lângă tableta afacerii.', 'Dynamic NFC access is ready at ${_timeLabel(payload.timestamp)}. Hold this phone near the business tablet.');
         _isWritingNfc = false;
       });
     } on Object catch (error) {
@@ -240,7 +241,7 @@ class _ClientDynamicQrScreenState extends ConsumerState<ClientDynamicQrScreen> {
       }
       setState(() {
         _isWritingNfc = false;
-        _nfcMessage = 'Could not prepare NFC: $error';
+        _nfcMessage = tr('NFC nu a putut fi pregătit: $error', 'Could not prepare NFC: $error');
       });
     }
   }
@@ -260,7 +261,7 @@ class _QrPreview extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              'Show this code for scanning.',
+              t('Show this code for scanning.'),
               style: Theme.of(context).textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
@@ -274,7 +275,7 @@ class _QrPreview extends StatelessWidget {
             if (issuedAt != null) ...[
               const SizedBox(height: 12),
               Text(
-                'Generated at ${_timeLabel(issuedAt!)}',
+                tr('Generat la ${_timeLabel(issuedAt!)}', 'Generated at ${_timeLabel(issuedAt!)}'),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -316,12 +317,12 @@ String _cardLabel(WalletCard card) {
 
 String _statusLabel(WalletCard card) {
   return switch (card.status) {
-    CardStatus.active => 'active',
-    CardStatus.expired => 'expired',
-    CardStatus.suspended => 'suspended',
-    CardStatus.cancelled => 'cancelled',
-    CardStatus.draft => 'draft',
-    CardStatus.revoked => 'revoked',
+    CardStatus.active => t('Active'),
+    CardStatus.expired => t('Expired'),
+    CardStatus.suspended => t('Suspended'),
+    CardStatus.cancelled => t('Cancelled'),
+    CardStatus.draft => t('Draft'),
+    CardStatus.revoked => t('Revoked'),
   };
 }
 

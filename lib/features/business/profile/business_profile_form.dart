@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers/business_profile_providers.dart';
 import '../../../core/constants/route_names.dart';
 import '../../../domain/entities/business_profile.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessProfileForm extends ConsumerStatefulWidget {
   const BusinessProfileForm({
@@ -74,8 +75,8 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Business Name',
+                decoration: InputDecoration(
+                  labelText: t('Business Name'),
                   border: OutlineInputBorder(),
                 ),
                 validator: _required,
@@ -83,8 +84,8 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _domainController,
-                decoration: const InputDecoration(
-                  labelText: 'Business Activity',
+                decoration: InputDecoration(
+                  labelText: t('Business Activity'),
                   border: OutlineInputBorder(),
                 ),
                 validator: _required,
@@ -92,8 +93,8 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String?>(
                 initialValue: _selectedActivitySymbol,
-                decoration: const InputDecoration(
-                  labelText: 'Activity Symbol',
+                decoration: InputDecoration(
+                  labelText: t('Activity Symbol'),
                   border: OutlineInputBorder(),
                 ),
                 items: _activitySymbols
@@ -119,8 +120,8 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone optional',
+                decoration: InputDecoration(
+                  labelText: t('Phone optional'),
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.phone,
@@ -128,8 +129,8 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email optional',
+                decoration: InputDecoration(
+                  labelText: t('Email optional'),
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
@@ -138,8 +139,8 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address optional',
+                decoration: InputDecoration(
+                  labelText: t('Address optional'),
                   border: OutlineInputBorder(),
                 ),
                 minLines: 1,
@@ -148,19 +149,19 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
               const SizedBox(height: 12),
               DropdownButtonFormField<int?>(
                 initialValue: _selectedAccentColor,
-                decoration: const InputDecoration(
-                  labelText: 'Card Color',
+                decoration: InputDecoration(
+                  labelText: t('Card Color'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('Default')),
-                  DropdownMenuItem(value: 0xFF2563EB, child: Text('Blue')),
-                  DropdownMenuItem(value: 0xFFDC2626, child: Text('Red')),
-                  DropdownMenuItem(value: 0xFF16A34A, child: Text('Green')),
-                  DropdownMenuItem(value: 0xFFD6AA2F, child: Text('Gold')),
-                  DropdownMenuItem(value: 0xFF7C3AED, child: Text('Purple')),
-                  DropdownMenuItem(value: 0xFFEA580C, child: Text('Orange')),
-                  DropdownMenuItem(value: 0xFF0F172A, child: Text('Black')),
+                items: [
+                  DropdownMenuItem(value: null, child: Text(t('Default'))),
+                  DropdownMenuItem(value: 0xFF2563EB, child: Text(t('Blue'))),
+                  DropdownMenuItem(value: 0xFFDC2626, child: Text(t('Red'))),
+                  DropdownMenuItem(value: 0xFF16A34A, child: Text(t('Green'))),
+                  DropdownMenuItem(value: 0xFFD6AA2F, child: Text(t('Gold'))),
+                  DropdownMenuItem(value: 0xFF7C3AED, child: Text(t('Purple'))),
+                  DropdownMenuItem(value: 0xFFEA580C, child: Text(t('Orange'))),
+                  DropdownMenuItem(value: 0xFF0F172A, child: Text(t('Black'))),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -183,7 +184,7 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Required field.';
+      return t('Required field.');
     }
     return null;
   }
@@ -193,7 +194,7 @@ class _BusinessProfileFormState extends ConsumerState<BusinessProfileForm> {
     if (trimmed.isEmpty || trimmed.contains('@')) {
       return null;
     }
-    return 'Enter a valid email or leave the field empty.';
+    return t('Enter a valid email or leave the field empty.');
   }
 
   Future<void> _save() async {
@@ -264,49 +265,49 @@ class _ActivitySymbolOption {
   final IconData icon;
 }
 
-const _activitySymbols = [
-  _ActivitySymbolOption(value: null, label: 'Default', icon: Icons.storefront),
+List<_ActivitySymbolOption> get _activitySymbols => [
+  _ActivitySymbolOption(value: null, label: t('Default'), icon: Icons.storefront),
   _ActivitySymbolOption(
     value: 'robotics',
-    label: 'Robotics',
+    label: t('Robotics'),
     icon: Icons.precision_manufacturing,
   ),
-  _ActivitySymbolOption(value: 'dance', label: 'Dance', icon: Icons.music_note),
-  _ActivitySymbolOption(value: 'swimming', label: 'Swimming', icon: Icons.pool),
+  _ActivitySymbolOption(value: 'dance', label: t('Dance'), icon: Icons.music_note),
+  _ActivitySymbolOption(value: 'swimming', label: t('Swimming'), icon: Icons.pool),
   _ActivitySymbolOption(
     value: 'fitness',
-    label: 'Fitness',
+    label: t('Fitness'),
     icon: Icons.fitness_center,
   ),
-  _ActivitySymbolOption(value: 'beauty', label: 'Beauty', icon: Icons.spa),
+  _ActivitySymbolOption(value: 'beauty', label: t('Beauty'), icon: Icons.spa),
   _ActivitySymbolOption(
     value: 'coffee',
-    label: 'Coffee',
+    label: t('Coffee'),
     icon: Icons.local_cafe,
   ),
   _ActivitySymbolOption(
     value: 'restaurant',
-    label: 'Restaurant',
+    label: t('Restaurant'),
     icon: Icons.restaurant,
   ),
   _ActivitySymbolOption(
     value: 'education',
-    label: 'Education',
+    label: t('Education'),
     icon: Icons.school,
   ),
   _ActivitySymbolOption(
     value: 'medical',
-    label: 'Medical',
+    label: t('Medical'),
     icon: Icons.medical_services,
   ),
   _ActivitySymbolOption(
     value: 'auto',
-    label: 'Auto',
+    label: t('Auto'),
     icon: Icons.directions_car,
   ),
   _ActivitySymbolOption(
     value: 'retail',
-    label: 'Retail',
+    label: t('Retail'),
     icon: Icons.shopping_bag,
   ),
 ];

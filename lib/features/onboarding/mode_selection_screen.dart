@@ -7,6 +7,7 @@ import '../../app/providers/app_settings_providers.dart';
 import '../../core/constants/route_names.dart';
 import '../../domain/value_objects/app_mode.dart';
 import '../../presentation/widgets/menu_tile.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class ModeSelectionScreen extends ConsumerWidget {
   const ModeSelectionScreen({super.key});
@@ -26,21 +27,21 @@ class ModeSelectionScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Choose how to use the app',
+                    t('Choose how to use the app'),
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 16),
                   MenuTile(
                     title: AppStrings.businessMode,
                     subtitle:
-                        'Local management for customers, memberships, loyalty and backup.',
+                        t('Local management for customers, memberships, loyalty and backup.'),
                     icon: Icons.storefront,
                     onTap: () => _selectMode(context, ref, AppMode.business),
                   ),
                   const SizedBox(height: 12),
                   MenuTile(
                     title: AppStrings.clientMode,
-                    subtitle: 'Local wallet for digital cards and dynamic QR.',
+                    subtitle: t('Local wallet for digital cards and dynamic QR.'),
                     icon: Icons.account_balance_wallet,
                     onTap: () => _selectMode(context, ref, AppMode.client),
                   ),

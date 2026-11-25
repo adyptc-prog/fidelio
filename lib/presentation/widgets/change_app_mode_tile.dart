@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/providers/app_settings_providers.dart';
 import '../../core/constants/route_names.dart';
 import '../../domain/value_objects/app_mode.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class ChangeAppModeTile extends ConsumerWidget {
   const ChangeAppModeTile({required this.currentMode, super.key});
@@ -20,8 +21,8 @@ class ChangeAppModeTile extends ConsumerWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.swap_horiz),
-        title: const Text('Change app mode'),
-        subtitle: Text('Current mode: ${_modeLabel(currentMode)}'),
+        title: Text(t('Change app mode')),
+        subtitle: Text(tr('Modul curent: ${_modeLabel(currentMode)}', 'Current mode: ${_modeLabel(currentMode)}')),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => _confirmAndChange(context, ref, targetMode),
       ),
@@ -36,18 +37,18 @@ class ChangeAppModeTile extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Change app mode?'),
+        title: Text(t('Change app mode?')),
         content: Text(
-          'You will switch to ${_modeLabel(targetMode)}. Existing local data will not be deleted.',
+          tr('Vei trece la ${_modeLabel(targetMode)}. Datele locale existente nu se șterg.', 'You will switch to ${_modeLabel(targetMode)}. Existing local data will not be deleted.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Confirm'),
+            child: Text(t('Confirm')),
           ),
         ],
       ),
@@ -75,7 +76,7 @@ class ChangeAppModeTile extends ConsumerWidget {
 
 String _modeLabel(AppMode mode) {
   return switch (mode) {
-    AppMode.business => 'Business',
-    AppMode.client => 'Client',
+    AppMode.business => t('Business'),
+    AppMode.client => t('Client'),
   };
 }

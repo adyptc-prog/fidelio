@@ -6,6 +6,7 @@ import '../../../app/providers/client_wallet_providers.dart';
 import '../../../app/providers/qr_providers.dart';
 import '../../../domain/entities/wallet_card.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 /// Lets a customer share their loyalty card with a friend who's physically
 /// present. Generates a one-time referral QR: the friend's imported card
@@ -31,11 +32,11 @@ class _ClientCardReferralScreenState
     final card = ref.watch(clientWalletCardProvider(widget.walletCardId));
 
     return SectionShell(
-      title: 'Refer a Friend',
+      title: t('Refer a Friend'),
       child: card.when(
         data: (card) {
           if (card == null) {
-            return const Center(child: Text('Card not found.'));
+            return Center(child: Text(t('Card not found.')));
           }
           if (_qrData == null && _errorMessage == null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -53,7 +54,7 @@ class _ClientCardReferralScreenState
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load card: $error')),
+            Center(child: Text(tr('Cardul nu a putut fi încărcat: $error', 'Could not load card: $error'))),
       ),
     );
   }
@@ -76,7 +77,7 @@ class _ClientCardReferralScreenState
       }
       setState(() {
         _qrData = null;
-        _errorMessage = 'Could not generate the referral code: $error';
+        _errorMessage = tr('Codul de recomandare nu a putut fi generat: $error', 'Could not generate the referral code: $error');
       });
     }
   }
@@ -132,7 +133,7 @@ class _ReferralContent extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
+                    label: Text(t('Try again')),
                     onPressed: onRetry,
                   ),
                 ] else if (qrData == null) ...[
@@ -141,8 +142,8 @@ class _ReferralContent extends StatelessWidget {
                     child: CircularProgressIndicator(),
                   ),
                 ] else ...[
-                  const Text(
-                    'Show this code to your friend.',
+                  Text(
+                    t('Show this code to your friend.'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -165,16 +166,23 @@ class _ReferralContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How it works',
+                  t('How it works'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '1. Your friend opens Fidelio → Import Card and scans this code.\n'
-                  '2. Their new card starts with a welcome bonus already on it.\n'
-                  '3. Once they visit $businessName and their card is registered, '
-                  'you receive a reward on your card too.\n\n'
-                  'This code is a one-time invite for a single friend.',
+                  tr(
+                    '1. Prietenul tău deschide Fidelio → Importă card și scanează acest cod.\n'
+                    '2. Cardul lui nou pornește deja cu un bonus de bun venit.\n'
+                    '3. După ce vizitează $businessName și cardul îi este înregistrat, '
+                    'primești și tu o recompensă pe cardul tău.\n\n'
+                    'Codul e o invitație unică, pentru un singur prieten.',
+                    '1. Your friend opens Fidelio → Import Card and scans this code.\n'
+                    '2. Their new card starts with a welcome bonus already on it.\n'
+                    '3. Once they visit $businessName and their card is registered, '
+                    'you receive a reward on your card too.\n\n'
+                    'This code is a one-time invite for a single friend.',
+                  ),
                 ),
               ],
             ),

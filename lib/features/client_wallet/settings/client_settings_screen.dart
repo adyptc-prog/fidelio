@@ -8,6 +8,8 @@ import '../../../domain/entities/app_settings.dart';
 import '../../../domain/value_objects/app_mode.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../../../presentation/widgets/change_app_mode_tile.dart';
+import 'package:fidelio/app/localization/app_language.dart';
+import 'package:fidelio/presentation/widgets/language_tile.dart';
 
 class ClientSettingsScreen extends ConsumerWidget {
   const ClientSettingsScreen({super.key});
@@ -21,7 +23,7 @@ class ClientSettingsScreen extends ConsumerWidget {
     final controller = ref.read(appSettingsControllerProvider.notifier);
 
     return SectionShell(
-      title: 'Settings Client',
+      title: t('Settings Client'),
       child: ListView(
         children: [
           Card(
@@ -31,21 +33,21 @@ class ClientSettingsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Card View',
+                    t('Card View'),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 12),
                   SegmentedButton<ClientCardsViewMode>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: ClientCardsViewMode.grid,
                         icon: Icon(Icons.grid_view),
-                        label: Text('Grid'),
+                        label: Text(t('Grid')),
                       ),
                       ButtonSegment(
                         value: ClientCardsViewMode.list,
                         icon: Icon(Icons.view_agenda),
-                        label: Text('List'),
+                        label: Text(t('List')),
                       ),
                     ],
                     selected: {current.clientCardsViewMode},
@@ -64,19 +66,19 @@ class ClientSettingsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Zoom', style: Theme.of(context).textTheme.titleMedium),
+                  Text(t('Zoom'), style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
                   SegmentedButton<AppZoomMode>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                         value: AppZoomMode.normal,
                         icon: Icon(Icons.text_fields),
-                        label: Text('Normal'),
+                        label: Text(t('Normal')),
                       ),
                       ButtonSegment(
                         value: AppZoomMode.large,
                         icon: Icon(Icons.format_size),
-                        label: Text('Large'),
+                        label: Text(t('Large')),
                       ),
                     ],
                     selected: {current.zoomMode},
@@ -92,7 +94,7 @@ class ClientSettingsScreen extends ConsumerWidget {
           Card(
             child: SwitchListTile(
               secondary: const Icon(Icons.dark_mode),
-              title: const Text('Dark Mode'),
+              title: Text(t('Dark Mode')),
               value: current.darkMode,
               onChanged: controller.setDarkMode,
             ),
@@ -111,7 +113,7 @@ class ClientSettingsScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Wallet ID',
+                            t('Wallet ID'),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 6),
@@ -124,7 +126,7 @@ class ClientSettingsScreen extends ConsumerWidget {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Copy Wallet ID',
+                      tooltip: t('Copy Wallet ID'),
                       icon: const Icon(Icons.copy),
                       onPressed: () async {
                         await Clipboard.setData(ClipboardData(text: value));
@@ -132,26 +134,27 @@ class ClientSettingsScreen extends ConsumerWidget {
                           return;
                         }
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Wallet ID copied.')),
+                          SnackBar(content: Text(t('Wallet ID copied.'))),
                         );
                       },
                     ),
                   ],
                 ),
-                loading: () => const ListTile(
+                loading: () => ListTile(
                   leading: Icon(Icons.account_balance_wallet),
-                  title: Text('Wallet ID'),
-                  subtitle: Text('Loading...'),
+                  title: Text(t('Wallet ID')),
+                  subtitle: Text(t('Loading...')),
                 ),
                 error: (error, stackTrace) => ListTile(
                   leading: const Icon(Icons.error_outline),
-                  title: const Text('Wallet ID'),
-                  subtitle: Text('Could not load wallet ID: $error'),
+                  title: Text(t('Wallet ID')),
+                  subtitle: Text(tr('ID-ul portofelului nu a putut fi încărcat: $error', 'Could not load wallet ID: $error')),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 12),
+          const LanguageTile(),          const SizedBox(height: 12),
           ChangeAppModeTile(currentMode: AppMode.client),
         ],
       ),

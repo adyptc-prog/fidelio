@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 /// Lets the client review and edit a message recommending Fidelio to a
 /// business, then share it via the system share sheet or copy it (e.g. to
@@ -33,11 +34,11 @@ class _ClientRecommendScreenState extends State<ClientRecommendScreen> {
   @override
   Widget build(BuildContext context) {
     return SectionShell(
-      title: 'Recommend Fidelio',
+      title: t('Recommend Fidelio'),
       child: ListView(
         children: [
-          const Text(
-            'Edit the message below, then share it or copy it to paste as a review.',
+          Text(
+            t('Edit the message below, then share it or copy it to paste as a review.'),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -45,21 +46,21 @@ class _ClientRecommendScreenState extends State<ClientRecommendScreen> {
             controller: _controller,
             minLines: 6,
             maxLines: 12,
-            decoration: const InputDecoration(
-              labelText: 'Message',
+            decoration: InputDecoration(
+              labelText: t('Message'),
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
             icon: const Icon(Icons.share),
-            label: const Text('Share'),
+            label: Text(t('Share')),
             onPressed: () => _share(context),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             icon: const Icon(Icons.copy),
-            label: const Text('Copy Text'),
+            label: Text(t('Copy Text')),
             onPressed: () => _copy(context),
           ),
         ],
@@ -76,7 +77,7 @@ class _ClientRecommendScreenState extends State<ClientRecommendScreen> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not share: $error')));
+      ).showSnackBar(SnackBar(content: Text(tr('Nu s-a putut trimite: $error', 'Could not share: $error'))));
     }
   }
 
@@ -86,8 +87,8 @@ class _ClientRecommendScreenState extends State<ClientRecommendScreen> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Text copied — paste it wherever you like.'),
+      SnackBar(
+        content: Text(t('Text copied — paste it wherever you like.')),
       ),
     );
   }

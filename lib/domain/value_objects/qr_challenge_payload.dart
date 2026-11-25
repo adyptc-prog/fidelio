@@ -1,4 +1,5 @@
-class QrChallengePayload {
+
+import 'package:fidelio/app/localization/app_language.dart';class QrChallengePayload {
   const QrChallengePayload({
     required this.type,
     required this.version,
@@ -43,7 +44,7 @@ class QrChallengePayload {
 
   static DateTime _parseDate(Object? value) {
     if (value is! String) {
-      throw const FormatException('Invalid date field in QR payload.');
+      throw FormatException(t('Invalid date field in QR payload.'));
     }
     return DateTime.parse(value);
   }

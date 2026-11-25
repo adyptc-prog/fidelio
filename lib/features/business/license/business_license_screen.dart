@@ -7,6 +7,7 @@ import '../../../app/providers/business_subscriptions_providers.dart';
 import '../../../app/providers/license_providers.dart';
 import '../../../domain/entities/license_status.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessLicenseScreen extends ConsumerWidget {
   const BusinessLicenseScreen({super.key});
@@ -16,12 +17,12 @@ class BusinessLicenseScreen extends ConsumerWidget {
     final business = ref.watch(businessProfileControllerProvider);
 
     return SectionShell(
-      title: 'License',
+      title: t('License'),
       child: business.when(
         data: (business) {
           if (business == null) {
-            return const Center(
-              child: Text('Business profile is not configured.'),
+            return Center(
+              child: Text(t('Business profile is not configured.')),
             );
           }
 
@@ -47,7 +48,7 @@ class BusinessLicenseScreen extends ConsumerWidget {
                 error: (error, stackTrace) => Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text('Could not check license: $error'),
+                    child: Text(tr('Licența nu a putut fi verificată: $error', 'Could not check license: $error')),
                   ),
                 ),
               ),
@@ -55,10 +56,10 @@ class BusinessLicenseScreen extends ConsumerWidget {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.store),
-                  title: const Text('Business ID'),
+                  title: Text(t('Business ID')),
                   subtitle: Text(business.businessId),
                   trailing: IconButton(
-                    tooltip: 'Copy Business ID',
+                    tooltip: t('Copy Business ID'),
                     icon: const Icon(Icons.copy),
                     onPressed: () async {
                       await Clipboard.setData(
@@ -68,7 +69,7 @@ class BusinessLicenseScreen extends ConsumerWidget {
                         return;
                       }
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Business ID copied.')),
+                        SnackBar(content: Text(t('Business ID copied.'))),
                       );
                     },
                   ),
@@ -78,12 +79,12 @@ class BusinessLicenseScreen extends ConsumerWidget {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.credit_card),
-                  title: const Text('Free limit'),
+                  title: Text(t('Free limit')),
                   subtitle: Text(
                     count.when(
-                      data: (count) => '$count/10 memberships and loyalty cards used',
-                      loading: () => 'Loading card count...',
-                      error: (error, stackTrace) => 'Could not load count: $error',
+                      data: (count) => tr('$count/10 abonamente și carduri de fidelitate folosite', '$count/10 memberships and loyalty cards used'),
+                      loading: () => t('Loading card count...'),
+                      error: (error, stackTrace) => tr('Numărul nu a putut fi încărcat: $error', 'Could not load count: $error'),
                     ),
                   ),
                 ),
@@ -93,10 +94,16 @@ class BusinessLicenseScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
-                    'Buy a license at voltacademy.app/fidelio.html using the Business ID above, '
-                    'then use "Select USB License" to import the downloaded fidelio_license.json '
-                    '(from your phone storage or a USB-C stick). Placing it on a stick at '
-                    '/Fidelio/fidelio_license.json also lets the app pick it up automatically.',
+                    tr(
+                      'Cumpără o licență de pe voltacademy.app/fidelio.html cu ID-ul afacerii de mai sus, '
+                      'apoi apasă „Alege fișierul de licență” ca să imporți fidelio_license.json descărcat '
+                      '(din memoria telefonului sau de pe un stick USB-C). Pus pe stick în '
+                      '/Fidelio/fidelio_license.json, e preluat și automat de aplicație.',
+                      'Buy a license at voltacademy.app/fidelio.html using the Business ID above, '
+                      'then use "Select License File" to import the downloaded fidelio_license.json '
+                      '(from your phone storage or a USB-C stick). Placing it on a stick at '
+                      '/Fidelio/fidelio_license.json also lets the app pick it up automatically.',
+                    ),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
@@ -106,7 +113,7 @@ class BusinessLicenseScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load business: $error')),
+            Center(child: Text(tr('Nu s-a putut încărca afacerea: $error', 'Could not load business: $error'))),
       ),
     );
   }
@@ -153,12 +160,12 @@ class _LicenseStatusCard extends StatelessWidget {
             Text(status.message, textAlign: TextAlign.center),
             if (status.licenseId != null) ...[
               const SizedBox(height: 12),
-              Text('License: ${status.licenseId}', textAlign: TextAlign.center),
+              Text(tr('Licență: ${status.licenseId}', 'License: ${status.licenseId}'), textAlign: TextAlign.center),
             ],
             if (status.validUntil != null) ...[
               const SizedBox(height: 6),
               Text(
-                'Valid until: ${status.validUntil}',
+                tr('Valabilă până la: ${status.validUntil}', 'Valid until: ${status.validUntil}'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: status.isExpiringSoon ? Colors.orange : null,
@@ -170,8 +177,8 @@ class _LicenseStatusCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 status.daysUntilExpiry! <= 1
-                    ? 'Expires tomorrow!'
-                    : '${status.daysUntilExpiry} days remaining',
+                    ? t('Expires tomorrow!')
+                    : tr('${status.daysUntilExpiry} zile rămase', '${status.daysUntilExpiry} days remaining'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: status.isExpiringSoon ? Colors.orange : null,
@@ -186,13 +193,13 @@ class _LicenseStatusCard extends StatelessWidget {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               icon: const Icon(Icons.refresh),
-              label: const Text('Check Again'),
+              label: Text(t('Check Again')),
               onPressed: onRefresh,
             ),
             const SizedBox(height: 8),
             FilledButton.icon(
               icon: const Icon(Icons.folder_open),
-              label: const Text('Select License File'),
+              label: Text(t('Select License File')),
               onPressed: onSelect,
             ),
           ],
@@ -217,18 +224,18 @@ class _LicensePresentation {
     return switch (status.state) {
       LicenseState.active => _LicensePresentation(
         title: (status.isLifetime ?? true)
-            ? 'Active Lifetime License'
-            : 'Active License',
+            ? t('Active Lifetime License')
+            : t('Active License'),
         icon: Icons.verified,
         color: status.isExpiringSoon ? Colors.orange : Colors.green,
       ),
-      LicenseState.invalid => const _LicensePresentation(
-        title: 'Invalid License',
+      LicenseState.invalid => _LicensePresentation(
+        title: t('Invalid License'),
         icon: Icons.error,
         color: Colors.red,
       ),
-      LicenseState.missing => const _LicensePresentation(
-        title: 'License Missing',
+      LicenseState.missing => _LicensePresentation(
+        title: t('License Missing'),
         icon: Icons.usb_off,
         color: Colors.orange,
       ),

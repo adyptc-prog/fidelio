@@ -13,6 +13,7 @@ import '../../../domain/entities/license_status.dart';
 import '../../../domain/services/birthday_service.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../clients/birthday_reward_dialog.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessDashboardScreen extends ConsumerStatefulWidget {
   const BusinessDashboardScreen({super.key});
@@ -89,11 +90,11 @@ class _BusinessDashboardScreenState
     }
 
     return SectionShell(
-      title: 'Business Mode',
+      title: t('Business Mode'),
       showBackButton: false,
       actions: [
         IconButton(
-          tooltip: 'Settings',
+          tooltip: t('Settings'),
           icon: const Icon(Icons.settings),
           onPressed: () => context.push(RouteNames.businessSettings),
         ),
@@ -101,8 +102,8 @@ class _BusinessDashboardScreenState
       child: business.when(
         data: (business) {
           if (business == null) {
-            return const Center(
-              child: Text('Business profile is not configured.'),
+            return Center(
+              child: Text(t('Business profile is not configured.')),
             );
           }
 
@@ -150,25 +151,25 @@ class _BusinessDashboardScreenState
               _DashboardActionsGrid(
                 actions: [
                   _DashboardAction(
-                    title: 'Customers',
+                    title: t('Customers'),
                     icon: Icons.people,
                     colors: const [Color(0xFF0B3B34), Color(0xFF16705F)],
                     onTap: () => context.push(RouteNames.businessClients),
                   ),
                   _DashboardAction(
-                    title: 'QR Scan',
+                    title: t('QR Scan'),
                     icon: Icons.qr_code_scanner,
                     colors: const [Color(0xFF123A52), Color(0xFF2A7C96)],
                     onTap: () => context.push(RouteNames.businessScanner),
                   ),
                   _DashboardAction(
-                    title: 'NFC',
+                    title: t('NFC'),
                     icon: Icons.nfc,
                     colors: const [Color(0xFF4E2D6B), Color(0xFF8B5BC0)],
                     onTap: () => context.push(RouteNames.businessNfcScanner),
                   ),
                   _DashboardAction(
-                    title: 'Leaderboard',
+                    title: t('Leaderboard'),
                     icon: Icons.leaderboard,
                     colors: const [Color(0xFF5D4210), Color(0xFFD6AA2F)],
                     onTap: () => context.push(RouteNames.businessLeaderboard),
@@ -184,7 +185,7 @@ class _BusinessDashboardScreenState
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load dashboard: $error')),
+            Center(child: Text(tr('Panoul nu a putut fi încărcat: $error', 'Could not load dashboard: $error'))),
       ),
     );
   }
@@ -251,13 +252,13 @@ class _ScanHistoryEntryCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.history),
-        title: const Text('Recent Scans'),
+        title: Text(t('Recent Scans')),
         subtitle: Text(
           isLoading
-              ? 'Loading...'
+              ? t('Loading...')
               : scanCount == 0
-              ? 'No scans recorded'
-              : '$scanCount scans recorded',
+              ? t('No scans recorded')
+              : tr('$scanCount scanări înregistrate', '$scanCount scans recorded'),
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
@@ -308,13 +309,13 @@ class _MetricsCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _Metric(label: 'Customers', value: customers),
+                  child: _Metric(label: t('Customers'), value: customers),
                 ),
                 Expanded(
-                  child: _Metric(label: 'Memberships', value: subscriptions),
+                  child: _Metric(label: t('Memberships'), value: subscriptions),
                 ),
                 Expanded(
-                  child: _Metric(label: 'Loyalty', value: loyaltyCards),
+                  child: _Metric(label: t('Loyalty'), value: loyaltyCards),
                 ),
               ],
             ),
@@ -325,7 +326,7 @@ class _MetricsCard extends StatelessWidget {
             if (errorMessage != null) ...[
               const SizedBox(height: 12),
               Text(
-                'Could not load all statistics: $errorMessage',
+                tr('Nu s-au putut încărca toate statisticile: $errorMessage', 'Could not load all statistics: $errorMessage'),
                 style: const TextStyle(color: Colors.white),
               ),
             ],
@@ -422,23 +423,23 @@ class _LicenseStatusBanner extends ConsumerWidget {
             ),
             title: Text(
               status.isExpiringSoon
-                  ? 'License expiring soon'
-                  : 'License active',
+                  ? t('License expiring soon')
+                  : t('License active'),
             ),
             subtitle: Text(
               status.isExpiringSoon && status.daysUntilExpiry != null
                   ? status.daysUntilExpiry! <= 1
-                        ? 'Expires tomorrow! Renew to avoid interruptions.'
-                        : '${status.daysUntilExpiry} days remaining. Renew to avoid interruptions.'
-                  : 'Unlimited cards enabled.',
+                        ? t('Expires tomorrow! Renew to avoid interruptions.')
+                        : tr('${status.daysUntilExpiry} zile rămase. Reînnoiește ca să eviți întreruperile.', '${status.daysUntilExpiry} days remaining. Renew to avoid interruptions.')
+                  : t('Unlimited cards enabled.'),
             ),
           ),
         ),
         LicenseState.missing => Card(
           child: ListTile(
             leading: const Icon(Icons.usb_off, color: Colors.orange),
-            title: const Text('License required'),
-            subtitle: const Text('Free limit reached. Tap to configure.'),
+            title: Text(t('License required')),
+            subtitle: Text(t('Free limit reached. Tap to configure.')),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(RouteNames.businessLicense),
           ),
@@ -446,7 +447,7 @@ class _LicenseStatusBanner extends ConsumerWidget {
         LicenseState.invalid => Card(
           child: ListTile(
             leading: Icon(Icons.error_outline, color: Colors.red.shade600),
-            title: const Text('License invalid'),
+            title: Text(t('License invalid')),
             subtitle: Text(status.message),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push(RouteNames.businessLicense),

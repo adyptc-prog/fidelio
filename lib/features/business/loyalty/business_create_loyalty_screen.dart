@@ -8,6 +8,7 @@ import '../../../domain/value_objects/customer_status.dart';
 import '../../../domain/value_objects/loyalty_program_type.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../clients/license_required_dialog.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessCreateLoyaltyScreen extends ConsumerStatefulWidget {
   const BusinessCreateLoyaltyScreen({super.key});
@@ -20,7 +21,7 @@ class BusinessCreateLoyaltyScreen extends ConsumerStatefulWidget {
 class _BusinessCreateLoyaltyScreenState
     extends ConsumerState<BusinessCreateLoyaltyScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Coffee Loyalty');
+  final _nameController = TextEditingController(text: t('Coffee Loyalty'));
   final _thresholdController = TextEditingController(text: '8');
   final _pointsPerScanController = TextEditingController(text: '10');
   final _windowDaysController = TextEditingController(text: '30');
@@ -54,7 +55,7 @@ class _BusinessCreateLoyaltyScreenState
     final customersState = ref.watch(businessCustomersControllerProvider);
 
     return SectionShell(
-      title: 'Create Loyalty Card',
+      title: t('Create Loyalty Card'),
       child: customersState.when(
         data: (state) => _buildForm(
           state.customers
@@ -63,7 +64,7 @@ class _BusinessCreateLoyaltyScreenState
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load customers: $error')),
+            Center(child: Text(tr('Clienții nu au putut fi încărcați: $error', 'Could not load customers: $error'))),
       ),
     );
   }
@@ -92,17 +93,17 @@ class _BusinessCreateLoyaltyScreenState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Issue Local Card',
+                    t('Issue Local Card'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
                   if (customers.isEmpty)
-                    const Text('Add an active customer first.')
+                    Text(t('Add an active customer first.'))
                   else ...[
                     DropdownButtonFormField<String>(
                       initialValue: _selectedCustomerId,
-                      decoration: const InputDecoration(
-                        labelText: 'Client',
+                      decoration: InputDecoration(
+                        labelText: t('Client'),
                         border: OutlineInputBorder(),
                       ),
                       items: customers
@@ -123,8 +124,8 @@ class _BusinessCreateLoyaltyScreenState
                     if (_programType == LoyaltyProgramType.points) ...[
                       TextFormField(
                         controller: _pointsPerScanController,
-                        decoration: const InputDecoration(
-                          labelText: 'Points awarded per scan',
+                        decoration: InputDecoration(
+                          labelText: t('Points awarded per scan'),
                           border: OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.number,
@@ -135,8 +136,8 @@ class _BusinessCreateLoyaltyScreenState
                     if (_programType == LoyaltyProgramType.visitChallenge) ...[
                       TextFormField(
                         controller: _windowDaysController,
-                        decoration: const InputDecoration(
-                          labelText: 'Challenge period in days',
+                        decoration: InputDecoration(
+                          labelText: t('Challenge period in days'),
                           border: OutlineInputBorder(),
                         ),
                         keyboardType: TextInputType.number,
@@ -146,8 +147,8 @@ class _BusinessCreateLoyaltyScreenState
                     ],
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Card Name',
+                      decoration: InputDecoration(
+                        labelText: t('Card Name'),
                         border: OutlineInputBorder(),
                       ),
                       validator: _required,
@@ -155,8 +156,8 @@ class _BusinessCreateLoyaltyScreenState
                     const SizedBox(height: 12),
                     DropdownButtonFormField<LoyaltyProgramType>(
                       initialValue: _programType,
-                      decoration: const InputDecoration(
-                        labelText: 'Loyalty Program Type',
+                      decoration: InputDecoration(
+                        labelText: t('Loyalty Program Type'),
                         border: OutlineInputBorder(),
                       ),
                       items: LoyaltyProgramType.values
@@ -186,11 +187,14 @@ class _BusinessCreateLoyaltyScreenState
                       controller: _thresholdController,
                       decoration: InputDecoration(
                         labelText: _thresholdLabel(_programType),
-                        helperText:
+                        helperText: tr(
+                            'După atâtea intrări, următoarea e intrarea bonus. '
+                            'După ce bonusul e acordat, cardul e folosit complet '
+                            'și trebuie creat unul nou.',
                             'After this many entries, the next one will be '
                             'the bonus entry. Once the bonus is redeemed, '
                             'the card is fully used and a new one must be '
-                            'created.',
+                            'created.'),
                         helperMaxLines: 3,
                         border: const OutlineInputBorder(),
                       ),
@@ -201,8 +205,8 @@ class _BusinessCreateLoyaltyScreenState
                     TextFormField(
                       controller: _startsAtController,
                       readOnly: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Valid From',
+                      decoration: InputDecoration(
+                        labelText: t('Valid From'),
                         border: OutlineInputBorder(),
                         suffixIcon: Icon(Icons.calendar_today),
                       ),
@@ -213,7 +217,7 @@ class _BusinessCreateLoyaltyScreenState
                       controller: _validUntilController,
                       readOnly: true,
                       decoration: InputDecoration(
-                        labelText: 'Valid Until (optional)',
+                        labelText: t('Valid Until (optional)'),
                         border: const OutlineInputBorder(),
                         suffixIcon: _validUntil == null
                             ? const Icon(Icons.calendar_today)
@@ -232,7 +236,7 @@ class _BusinessCreateLoyaltyScreenState
                     const SizedBox(height: 12),
                     FilledButton.icon(
                       icon: const Icon(Icons.loyalty),
-                      label: Text(_isSaving ? 'Saving...' : 'Save Card'),
+                      label: Text(_isSaving ? t('Saving...') : t('Save Card')),
                       onPressed: _isSaving ? null : _saveLoyaltyCard,
                     ),
                   ],
@@ -246,11 +250,17 @@ class _BusinessCreateLoyaltyScreenState
   }
 
   Future<void> _pickDate({required bool isStart}) async {
-    final initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    // Sfârșitul nu poate fi înaintea începutului: calendarul pentru
+    // sfârșit începe de la data de început.
+    final startDay = DateUtils.dateOnly(_startsAt);
+    var initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    if (!isStart && initialDate.isBefore(startDay)) {
+      initialDate = startDay;
+    }
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(2020),
+      firstDate: isStart ? DateTime(2020) : startDay,
       lastDate: DateTime(2100),
     );
     if (picked == null) {
@@ -272,13 +282,13 @@ class _BusinessCreateLoyaltyScreenState
   void _syncDateControllers() {
     _startsAtController.text = _formatDate(_startsAt);
     _validUntilController.text = _validUntil == null
-        ? 'No expiration'
+        ? t('No expiration')
         : _formatDate(_validUntil!);
   }
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Required field.';
+      return t('Required field.');
     }
     return null;
   }
@@ -286,7 +296,7 @@ class _BusinessCreateLoyaltyScreenState
   String? _positiveNomber(String? value) {
     final parsed = int.tryParse(value ?? '');
     if (parsed == null || parsed <= 0) {
-      return 'Enter a positive number.';
+      return t('Enter a positive number.');
     }
     return null;
   }
@@ -331,7 +341,7 @@ class _BusinessCreateLoyaltyScreenState
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Loyalty card was saved.')));
+      ).showSnackBar(SnackBar(content: Text(t('Loyalty card was saved.'))));
     } on LicenseRequiredException {
       if (mounted) {
         await showLicenseRequiredDialog(context);
@@ -339,7 +349,7 @@ class _BusinessCreateLoyaltyScreenState
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save loyalty card: $error')),
+          SnackBar(content: Text(tr('Cardul de fidelitate nu a putut fi salvat: $error', 'Could not save loyalty card: $error'))),
         );
       }
     } finally {
@@ -358,19 +368,19 @@ String _formatDate(DateTime value) {
 
 String _programTypeLabel(LoyaltyProgramType type) {
   return switch (type) {
-    LoyaltyProgramType.stamps => 'Stamps',
-    LoyaltyProgramType.points => 'Points per Visit',
-    LoyaltyProgramType.visitChallenge => 'Visit Challenge',
-    LoyaltyProgramType.delivery => 'Delivery',
+    LoyaltyProgramType.stamps => t('Stamps'),
+    LoyaltyProgramType.points => t('Points per Visit'),
+    LoyaltyProgramType.visitChallenge => t('Visit Challenge'),
+    LoyaltyProgramType.delivery => t('Delivery'),
   };
 }
 
 String _thresholdLabel(LoyaltyProgramType type) {
   return switch (type) {
-    LoyaltyProgramType.stamps => 'Number of stamps before bonus entry',
-    LoyaltyProgramType.points => 'Number of points before bonus entry',
-    LoyaltyProgramType.visitChallenge => 'Number of visits before bonus entry',
-    LoyaltyProgramType.delivery => 'Number of deliveries before bonus entry',
+    LoyaltyProgramType.stamps => t('Number of stamps before bonus entry'),
+    LoyaltyProgramType.points => t('Number of points before bonus entry'),
+    LoyaltyProgramType.visitChallenge => t('Number of visits before bonus entry'),
+    LoyaltyProgramType.delivery => t('Number of deliveries before bonus entry'),
   };
 }
 

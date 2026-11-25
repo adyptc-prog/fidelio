@@ -930,7 +930,7 @@ int _date(DateTime value) => value.toUtc().millisecondsSinceEpoch;
 int? _nullableDate(DateTime? value) => value == null ? null : _date(value);
 
 DateTime _readDate(Object? value) {
-  return DateTime.fromMillisecondsSinceEpoch(value! as int, isUtc: true);
+  return DateTime.fromMillisecondsSinceEpoch(value! as int).toLocal();
 }
 
 DateTime? _readNullableDate(Object? value) {

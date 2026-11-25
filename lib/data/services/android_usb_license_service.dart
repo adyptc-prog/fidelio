@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import '../../domain/entities/license_status.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class AndroidUsbLicenseService {
   const AndroidUsbLicenseService();
@@ -11,9 +12,9 @@ class AndroidUsbLicenseService {
 
   Future<LicenseStatus> checkLicense(String businessId) async {
     if (!Platform.isAndroid) {
-      return const LicenseStatus(
+      return LicenseStatus(
         state: LicenseState.missing,
-        message: 'USB license detection is available only on Android.',
+        message: t('USB license detection is available only on Android.'),
       );
     }
 
@@ -22,9 +23,9 @@ class AndroidUsbLicenseService {
       {'businessId': businessId},
     );
     if (result == null) {
-      return const LicenseStatus(
+      return LicenseStatus(
         state: LicenseState.missing,
-        message: 'USB license was not found.',
+        message: t('USB license was not found.'),
       );
     }
     return LicenseStatus.fromJson(result);

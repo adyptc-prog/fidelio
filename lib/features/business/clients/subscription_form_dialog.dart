@@ -5,6 +5,7 @@ import '../../../app/providers/business_subscriptions_providers.dart';
 import '../../../domain/entities/customer_record.dart';
 import '../../../domain/value_objects/subscription_type.dart';
 import 'license_required_dialog.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 Future<void> showSubscriptionFormDialog(
   BuildContext context, {
@@ -29,7 +30,7 @@ class _SubscriptionFormDialog extends ConsumerStatefulWidget {
 class _SubscriptionFormDialogState
     extends ConsumerState<_SubscriptionFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Membership monthly');
+  final _nameController = TextEditingController(text: t('Membership monthly'));
   final _startsAtController = TextEditingController();
   final _expiresAtController = TextEditingController();
   final _entriesController = TextEditingController();
@@ -59,7 +60,7 @@ class _SubscriptionFormDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Create Membership'),
+      title: Text(t('Create Membership')),
       content: SizedBox(
         width: 540,
         child: Form(
@@ -70,8 +71,8 @@ class _SubscriptionFormDialogState
               children: [
                 DropdownButtonFormField<SubscriptionType>(
                   initialValue: _type,
-                  decoration: const InputDecoration(
-                    labelText: 'Membership Type',
+                  decoration: InputDecoration(
+                    labelText: t('Membership Type'),
                     border: OutlineInputBorder(),
                   ),
                   items: SubscriptionType.values
@@ -92,8 +93,8 @@ class _SubscriptionFormDialogState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Membership Name',
+                  decoration: InputDecoration(
+                    labelText: t('Membership Name'),
                     border: OutlineInputBorder(),
                   ),
                   validator: _required,
@@ -102,8 +103,8 @@ class _SubscriptionFormDialogState
                 TextFormField(
                   controller: _startsAtController,
                   readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Start Date',
+                  decoration: InputDecoration(
+                    labelText: t('Start Date'),
                     border: OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                   ),
@@ -113,8 +114,8 @@ class _SubscriptionFormDialogState
                 TextFormField(
                   controller: _expiresAtController,
                   readOnly: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Expiration Date',
+                  decoration: InputDecoration(
+                    labelText: t('Expiration Date'),
                     border: OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                   ),
@@ -123,8 +124,8 @@ class _SubscriptionFormDialogState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _entriesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Entry count optional',
+                  decoration: InputDecoration(
+                    labelText: t('Entry count optional'),
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -133,8 +134,8 @@ class _SubscriptionFormDialogState
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes optional',
+                  decoration: InputDecoration(
+                    labelText: t('Notes optional'),
                     border: OutlineInputBorder(),
                   ),
                   minLines: 2,
@@ -148,22 +149,28 @@ class _SubscriptionFormDialogState
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(t('Cancel')),
         ),
         FilledButton(
           onPressed: _isSaving ? null : _save,
-          child: Text(_isSaving ? 'Saving...' : 'Save'),
+          child: Text(_isSaving ? t('Saving...') : t('Save')),
         ),
       ],
     );
   }
 
   Future<void> _pickDate({required bool isStart}) async {
-    final initialDate = isStart ? _startsAt : _expiresAt;
+    // Sfârșitul nu poate fi înaintea începutului: calendarul pentru
+    // sfârșit începe de la data de început.
+    final startDay = DateUtils.dateOnly(_startsAt);
+    var initialDate = isStart ? _startsAt : _expiresAt;
+    if (!isStart && initialDate.isBefore(startDay)) {
+      initialDate = startDay;
+    }
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(2020),
+      firstDate: isStart ? DateTime(2020) : startDay,
       lastDate: DateTime(2100),
     );
     if (picked == null) {
@@ -235,7 +242,7 @@ class _SubscriptionFormDialogState
         _isSaving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not save membership: $error')),
+        SnackBar(content: Text(tr('Abonamentul nu a putut fi salvat: $error', 'Could not save membership: $error'))),
       );
     }
   }
@@ -247,7 +254,7 @@ class _SubscriptionFormDialogState
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Required field.';
+      return t('Required field.');
     }
     return null;
   }
@@ -259,7 +266,7 @@ class _SubscriptionFormDialogState
     }
     final parsed = int.tryParse(trimmed);
     if (parsed == null || parsed <= 0) {
-      return 'Enter a positive number.';
+      return t('Enter a positive number.');
     }
     return null;
   }
@@ -278,8 +285,8 @@ String _formatDate(DateTime value) {
 
 String _typeLabel(SubscriptionType type) {
   return switch (type) {
-    SubscriptionType.monthly => 'Monthly',
-    SubscriptionType.entries => 'Entry count',
-    SubscriptionType.custom => 'Custom',
+    SubscriptionType.monthly => t('Monthly'),
+    SubscriptionType.entries => t('Entry count'),
+    SubscriptionType.custom => t('Custom'),
   };
 }

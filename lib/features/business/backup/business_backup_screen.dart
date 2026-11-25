@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/backup_providers.dart';
 import '../../../app/providers/business_profile_providers.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessBackupScreen extends ConsumerStatefulWidget {
   const BusinessBackupScreen({super.key});
@@ -23,12 +25,12 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
     final folder = ref.watch(backupFolderProvider);
 
     return SectionShell(
-      title: 'Backup & Restore',
+      title: t('Backup & Restore'),
       child: business.when(
         data: (business) {
           if (business == null) {
-            return const Center(
-              child: Text('Business profile is not configured.'),
+            return Center(
+              child: Text(t('Business profile is not configured.')),
             );
           }
 
@@ -37,12 +39,14 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.folder),
-                  title: const Text('USB Backup Folder'),
+                  title: Text(t('USB Backup Folder')),
                   subtitle: Text(
                     folder.when(
-                      data: (value) => value ?? 'No USB backup folder selected',
-                      loading: () => 'Loading folder...',
-                      error: (error, stackTrace) => 'Folder unavailable',
+                      data: (value) => value == null
+                          ? t('No USB backup folder selected')
+                          : displayBackupFolder(value),
+                      loading: () => t('Loading folder...'),
+                      error: (error, stackTrace) => t('Folder unavailable'),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -52,13 +56,13 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
               const SizedBox(height: 12),
               FilledButton.icon(
                 icon: const Icon(Icons.folder_open),
-                label: const Text('Select USB Backup Folder'),
+                label: Text(t('Select USB Backup Folder')),
                 onPressed: _isBusy ? null : _selectFolder,
               ),
               const SizedBox(height: 8),
               FilledButton.icon(
                 icon: const Icon(Icons.backup),
-                label: const Text('Create Backup on USB'),
+                label: Text(t('Create Backup on USB')),
                 onPressed: _isBusy
                     ? null
                     : () => _createBackup(
@@ -69,7 +73,7 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 icon: const Icon(Icons.restore),
-                label: const Text('Restore Backup from USB'),
+                label: Text(t('Restore Backup from USB')),
                 onPressed: _isBusy ? null : _confirmRestoreFromPicker,
               ),
               if (_message != null) ...[
@@ -82,11 +86,11 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
                 ),
               ],
               const SizedBox(height: 16),
-              const Card(
+              Card(
                 child: Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'Restore opens the USB picker so you can choose a .fideliobackup file directly.',
+                    t('Restore opens the USB picker so you can choose a .fideliobackup file directly.'),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -96,7 +100,7 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load business: $error')),
+            Center(child: Text(tr('Nu s-a putut încărca afacerea: $error', 'Could not load business: $error'))),
       ),
     );
   }
@@ -109,9 +113,9 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
     try {
       await ref.read(usbBackupServiceProvider).pickBackupFolder();
       ref.invalidate(backupFolderProvider);
-      setState(() => _message = 'Backup folder selected.');
+      setState(() => _message = t('Backup folder selected.'));
     } on Object catch (error) {
-      setState(() => _message = 'Could not select folder: $error');
+      setState(() => _message = tr('Nu s-a putut alege folderul: $error', 'Could not select folder: $error'));
     } finally {
       if (mounted) {
         setState(() => _isBusy = false);
@@ -125,15 +129,15 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
   }) async {
     setState(() {
       _isBusy = true;
-      _message = 'Creating backup...';
+      _message = t('Creating backup...');
     });
     try {
       final backup = await ref
           .read(usbBackupServiceProvider)
           .createBackup(businessId: businessId, businessName: businessName);
-      setState(() => _message = 'Backup created: ${backup.name}');
+      setState(() => _message = tr('Backup creat: ${backup.name}', 'Backup created: ${backup.name}'));
     } on Object catch (error) {
-      setState(() => _message = 'Could not create backup: $error');
+      setState(() => _message = tr('Nu s-a putut crea backup-ul: ${friendlyBackupError(error)}', 'Could not create backup: ${friendlyBackupError(error)}'));
     } finally {
       if (mounted) {
         setState(() => _isBusy = false);
@@ -145,18 +149,18 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Restore backup?'),
-        content: const Text(
-          'This will replace all local data with the selected USB backup.',
+        title: Text(t('Restore backup?')),
+        content: Text(
+          t('This will replace all local data with the selected USB backup.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Restore'),
+            child: Text(t('Restore')),
           ),
         ],
       ),
@@ -169,19 +173,41 @@ class _BusinessBackupScreenState extends ConsumerState<BusinessBackupScreen> {
   Future<void> _restoreFromPicker() async {
     setState(() {
       _isBusy = true;
-      _message = 'Select the backup file from USB...';
+      _message = t('Select the backup file from USB...');
     });
     try {
       await ref.read(backupRestoreControllerProvider).pickAndRestoreBackup();
       setState(
-        () => _message = 'Backup restored. Local data has been reloaded.',
+        () => _message = t('Backup restored. Local data has been reloaded.'),
       );
     } on Object catch (error) {
-      setState(() => _message = 'Could not restore backup: $error');
+      setState(() => _message = tr('Nu s-a putut restaura backup-ul: ${friendlyBackupError(error)}', 'Could not restore backup: ${friendlyBackupError(error)}'));
     } finally {
       if (mounted) {
         setState(() => _isBusy = false);
       }
     }
   }
+}
+
+/// Mesajul pentru utilizator, fără „PlatformException(COD, ...)”.
+String friendlyBackupError(Object error) {
+  if (error is PlatformException) {
+    final message = error.message?.trim() ?? '';
+    return message.isEmpty ? error.code : message;
+  }
+  return error.toString().replaceFirst(RegExp(r'^(Exception|StateError): '), '');
+}
+
+/// „content://…/tree/primary%3ADocuments%2FFidelioBackup” → „Documents/FidelioBackup”.
+String displayBackupFolder(String uri) {
+  final marker = uri.indexOf('/tree/');
+  if (!uri.startsWith('content://') || marker == -1) return uri;
+  final decoded = Uri.decodeComponent(uri.substring(marker + 6));
+  final colon = decoded.indexOf(':');
+  if (colon == -1) return decoded;
+  final volume = decoded.substring(0, colon);
+  final path = decoded.substring(colon + 1);
+  if (volume == 'primary') return path.isEmpty ? t('Phone storage') : path;
+  return path.isEmpty ? 'USB ($volume)' : 'USB ($volume): $path';
 }

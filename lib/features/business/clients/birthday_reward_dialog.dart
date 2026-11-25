@@ -8,6 +8,7 @@ import '../../../domain/entities/customer_record.dart';
 import '../../../domain/entities/loyalty_card.dart';
 import '../../../domain/value_objects/card_status.dart';
 import 'birthday_reward_card_screen.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 /// Shows the "grant a birthday reward?" prompt for [customer]. Handles the
 /// whole flow: Yes/No choice, picking a loyalty card when the customer has
@@ -41,19 +42,20 @@ class _BirthdayRewardDialogState extends ConsumerState<_BirthdayRewardDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Birthday Reward'),
+      title: Text(t('Birthday Reward')),
       content: Text(
-        'Do you want to grant a reward for ${widget.customer.displayName}\'s '
-        'birthday?',
+        tr('Acorzi un cadou de ziua lui ${widget.customer.displayName}?',
+            'Do you want to grant a reward for ${widget.customer.displayName}\'s '
+            'birthday?'),
       ),
       actions: [
         TextButton(
           onPressed: _isProcessing ? null : _decline,
-          child: const Text('No'),
+          child: Text(t('No')),
         ),
         FilledButton(
           onPressed: _isProcessing ? null : _accept,
-          child: Text(_isProcessing ? 'Working...' : 'Yes'),
+          child: Text(_isProcessing ? t('Working...') : t('Yes')),
         ),
       ],
     );
@@ -103,7 +105,7 @@ class _BirthdayRewardDialogState extends ConsumerState<_BirthdayRewardDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${widget.customer.displayName} has no active loyalty card to reward.',
+            tr('${widget.customer.displayName} nu are niciun card de fidelitate activ pentru cadou.', '${widget.customer.displayName} has no active loyalty card to reward.'),
           ),
         ),
       );
@@ -129,7 +131,7 @@ class _BirthdayRewardDialogState extends ConsumerState<_BirthdayRewardDialog> {
       }
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not grant the reward: $error')),
+        SnackBar(content: Text(tr('Cadoul nu a putut fi acordat: $error', 'Could not grant the reward: $error'))),
       );
       return;
     }
@@ -153,7 +155,7 @@ class _BirthdayRewardDialogState extends ConsumerState<_BirthdayRewardDialog> {
     return showDialog<LoyaltyCard>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Which card gets the reward?'),
+        title: Text(t('Which card gets the reward?')),
         children: cards
             .map(
               (card) => SimpleDialogOption(

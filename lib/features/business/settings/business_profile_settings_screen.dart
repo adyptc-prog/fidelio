@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers/business_profile_providers.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../profile/business_profile_form.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessProfileSettingsScreen extends ConsumerWidget {
   const BusinessProfileSettingsScreen({super.key});
@@ -13,13 +14,13 @@ class BusinessProfileSettingsScreen extends ConsumerWidget {
     final profile = ref.watch(businessProfileControllerProvider);
 
     return SectionShell(
-      title: 'Business Details',
+      title: t('Business Details'),
       child: ListView(
         children: [
           profile.when(
             data: (profile) => BusinessProfileForm(
               initialProfile: profile,
-              submitLabel: 'Save Changes',
+              submitLabel: t('Save Changes'),
             ),
             loading: () => const Center(
               child: Padding(
@@ -28,7 +29,7 @@ class BusinessProfileSettingsScreen extends ConsumerWidget {
               ),
             ),
             error: (error, stackTrace) =>
-                Text('Could not load business profile: $error'),
+                Text(tr('Profilul afacerii nu a putut fi încărcat: $error', 'Could not load business profile: $error')),
           ),
         ],
       ),

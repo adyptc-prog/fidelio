@@ -7,6 +7,7 @@ import '../../../app/providers/business_check_in_providers.dart';
 import '../../../app/providers/nfc_access_providers.dart';
 import '../../../app/providers/scan_feedback_providers.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessNfcScannerScreen extends ConsumerStatefulWidget {
   const BusinessNfcScannerScreen({super.key});
@@ -24,7 +25,7 @@ class _BusinessNfcScannerScreenState
   @override
   Widget build(BuildContext context) {
     return SectionShell(
-      title: 'NFC Access',
+      title: t('NFC Access'),
       child: ListView(
         children: [
           Card(
@@ -35,14 +36,14 @@ class _BusinessNfcScannerScreenState
                 children: [
                   const Icon(Icons.nfc, size: 72),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Read the client phone by NFC. The same local validation used for Dynamic QR will be applied.',
+                  Text(
+                    t('Read the client phone by NFC. The same local validation used for Dynamic QR will be applied.'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     icon: const Icon(Icons.nfc),
-                    label: Text(_isReading ? 'Waiting for NFC...' : 'Read NFC'),
+                    label: Text(_isReading ? t('Waiting for NFC...') : t('Read NFC')),
                     onPressed: _isReading ? null : _readNfc,
                   ),
                 ],
@@ -154,75 +155,75 @@ class _ScanResultPresentation {
 
   factory _ScanResultPresentation.fromResult(CheckInScanResult result) {
     return switch (result.message) {
-      'threshold_reached' => const _ScanResultPresentation(
-        title: 'All Entries Reached!',
+      'threshold_reached' => _ScanResultPresentation(
+        title: t('All Entries Reached!'),
         description:
-            'All regular entries were used. The next entry will be the bonus one.',
+            t('All regular entries were used. The next entry will be the bonus one.'),
         icon: Icons.celebration,
       ),
-      'bonus_entry' => const _ScanResultPresentation(
-        title: 'This Entry Is Bonus!',
+      'bonus_entry' => _ScanResultPresentation(
+        title: t('This Entry Is Bonus!'),
         description:
-            'Bonus entry redeemed. This card is now fully used; create a new card for further visits.',
+            t('Bonus entry redeemed. This card is now fully used; create a new card for further visits.'),
         icon: Icons.stars,
       ),
-      'card_completed' => const _ScanResultPresentation(
-        title: 'Card Fully Used',
+      'card_completed' => _ScanResultPresentation(
+        title: t('Card Fully Used'),
         description:
-            'All entries, including the bonus, were already used. Create a new card for this client.',
+            t('All entries, including the bonus, were already used. Create a new card for this client.'),
         icon: Icons.block,
       ),
-      'invalid QR' => const _ScanResultPresentation(
-        title: 'Invalid or Expired NFC',
-        description: 'Ask the client to prepare a fresh NFC access code.',
+      'invalid QR' => _ScanResultPresentation(
+        title: t('Invalid or Expired NFC'),
+        description: t('Ask the client to prepare a fresh NFC access code.'),
         icon: Icons.timer_off,
       ),
-      'reused QR' => const _ScanResultPresentation(
-        title: 'NFC Already Used',
-        description: 'This access code was already accepted.',
+      'reused QR' => _ScanResultPresentation(
+        title: t('NFC Already Used'),
+        description: t('This access code was already accepted.'),
         icon: Icons.replay_circle_filled,
       ),
-      'wallet mismatch' => const _ScanResultPresentation(
-        title: 'Different Client Wallet',
+      'wallet mismatch' => _ScanResultPresentation(
+        title: t('Different Client Wallet'),
         description:
-            'This card is already linked to another client phone. Ask the client to use the original phone wallet.',
+            t('This card is already linked to another client phone. Ask the client to use the original phone wallet.'),
         icon: Icons.phonelink_lock,
       ),
-      'expired' => const _ScanResultPresentation(
-        title: 'Membership Expired',
-        description: 'The card exists, but its validity period has passed.',
+      'expired' => _ScanResultPresentation(
+        title: t('Membership Expired'),
+        description: t('The card exists, but its validity period has passed.'),
         icon: Icons.event_busy,
       ),
-      'not_active_yet' => const _ScanResultPresentation(
-        title: 'Card Not Active Yet',
-        description: 'This card becomes valid on a future date.',
+      'not_active_yet' => _ScanResultPresentation(
+        title: t('Card Not Active Yet'),
+        description: t('This card becomes valid on a future date.'),
         icon: Icons.hourglass_top,
       ),
-      'no entries' => const _ScanResultPresentation(
-        title: 'No Entries Available',
-        description: 'The membership has no remaining entries.',
+      'no entries' => _ScanResultPresentation(
+        title: t('No Entries Available'),
+        description: t('The membership has no remaining entries.'),
         icon: Icons.remove_circle,
       ),
-      'suspended' => const _ScanResultPresentation(
-        title: 'Card Suspended',
-        description: 'The card is suspended and cannot be validated.',
+      'suspended' => _ScanResultPresentation(
+        title: t('Card Suspended'),
+        description: t('The card is suspended and cannot be validated.'),
         icon: Icons.pause_circle,
       ),
-      'unknown' => const _ScanResultPresentation(
-        title: 'Unknown Card',
+      'unknown' => _ScanResultPresentation(
+        title: t('Unknown Card'),
         description:
-            'The NFC data does not match an active membership for this business.',
+            t('The NFC data does not match an active membership for this business.'),
         icon: Icons.help,
       ),
       _ =>
         result.isValid
-            ? const _ScanResultPresentation(
-                title: 'Access Validated',
-                description: 'Check-in recorded. The membership was updated.',
+            ? _ScanResultPresentation(
+                title: t('Access Validated'),
+                description: t('Check-in recorded. The membership was updated.'),
                 icon: Icons.check_circle,
               )
             : _ScanResultPresentation(
-                title: 'NFC Rejected',
+                title: t('NFC Rejected'),
                 description: result.message,
                 icon: Icons.error,
               ),

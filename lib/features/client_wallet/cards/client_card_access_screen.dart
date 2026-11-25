@@ -9,6 +9,7 @@ import '../../../app/providers/qr_providers.dart';
 import '../../../domain/entities/wallet_card.dart';
 import '../../../domain/value_objects/card_status.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 enum ClientCardAccessMode { qr, nfc }
 
@@ -42,16 +43,16 @@ class _ClientCardAccessScreenState
     final card = ref.watch(clientWalletCardProvider(widget.walletCardId));
 
     return SectionShell(
-      title: _isQr ? 'QR Access' : 'NFC Access',
+      title: _isQr ? t('QR Access') : t('NFC Access'),
       child: card.when(
         data: (card) {
           if (card == null) {
-            return const Center(child: Text('Card not found.'));
+            return Center(child: Text(t('Card not found.')));
           }
           if (card.status != CardStatus.active) {
-            return const Center(
+            return Center(
               child: Text(
-                'Access is available only for active cards.',
+                t('Access is available only for active cards.'),
                 textAlign: TextAlign.center,
               ),
             );
@@ -82,7 +83,7 @@ class _ClientCardAccessScreenState
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load card: $error')),
+            Center(child: Text(tr('Cardul nu a putut fi încărcat: $error', 'Could not load card: $error'))),
       ),
     );
   }
@@ -130,8 +131,8 @@ class _ClientCardAccessScreenState
         _issuedAt = null;
         _isPreparing = false;
         _errorMessage = _isQr
-            ? 'Could not generate QR: $error'
-            : 'Could not prepare NFC: $error';
+            ? tr('Codul QR nu a putut fi generat: $error', 'Could not generate QR: $error')
+            : tr('NFC nu a putut fi pregătit: $error', 'Could not prepare NFC: $error');
       });
     }
   }
@@ -157,7 +158,7 @@ class _ClientCardAccessScreenState
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not update card: $error')));
+      ).showSnackBar(SnackBar(content: Text(tr('Cardul nu a putut fi actualizat: $error', 'Could not update card: $error'))));
     }
   }
 }
@@ -227,12 +228,12 @@ class _AccessContent extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton.icon(
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Try again'),
+                    label: Text(t('Try again')),
                     onPressed: onRetry,
                   ),
                 ] else if (_isQr && qrData != null) ...[
-                  const Text(
-                    'Show this code for scanning.',
+                  Text(
+                    t('Show this code for scanning.'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -246,7 +247,7 @@ class _AccessContent extends StatelessWidget {
                   const Icon(Icons.nfc, size: 72),
                   const SizedBox(height: 16),
                   Text(
-                    'Hold the phone near the scanner.',
+                    t('Hold the phone near the scanner.'),
                     style: Theme.of(context).textTheme.titleMedium,
                     textAlign: TextAlign.center,
                   ),
@@ -254,7 +255,7 @@ class _AccessContent extends StatelessWidget {
                 if (issuedAt != null && errorMessage == null) ...[
                   const SizedBox(height: 12),
                   Text(
-                    'Generated at ${_timeLabel(issuedAt!)}',
+                    tr('Generat la ${_timeLabel(issuedAt!)}', 'Generated at ${_timeLabel(issuedAt!)}'),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -263,11 +264,11 @@ class _AccessContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        const Card(
+        Card(
           child: Padding(
             padding: EdgeInsets.all(16),
             child: Text(
-              'After the business scans this access code, tap Update to refresh this phone wallet locally.',
+              t('After the business scans this access code, tap Update to refresh this phone wallet locally.'),
               textAlign: TextAlign.center,
             ),
           ),
@@ -275,7 +276,7 @@ class _AccessContent extends StatelessWidget {
         const SizedBox(height: 12),
         FilledButton.icon(
           icon: const Icon(Icons.done_all),
-          label: Text(isUpdating ? 'Updating...' : 'Update local card'),
+          label: Text(isUpdating ? t('Updating...') : t('Update local card')),
           onPressed: onUpdate,
         ),
       ],

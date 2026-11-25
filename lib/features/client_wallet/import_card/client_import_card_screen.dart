@@ -11,6 +11,7 @@ import '../../../app/providers/scan_feedback_providers.dart';
 import '../../../core/constants/route_names.dart';
 import '../../../domain/entities/subscription_import_payload.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class ClientImportCardScreen extends ConsumerStatefulWidget {
   const ClientImportCardScreen({super.key});
@@ -36,7 +37,7 @@ class _ClientImportCardScreenState
   @override
   Widget build(BuildContext context) {
     return SectionShell(
-      title: 'Import Card',
+      title: t('Import Card'),
       child: ListView(
         children: [
           Card(
@@ -59,13 +60,13 @@ class _ClientImportCardScreenState
                   FilledButton.tonalIcon(
                     icon: const Icon(Icons.nfc),
                     label: Text(
-                      _handlingNfc ? 'Waiting for NFC...' : 'Import by NFC',
+                      _handlingNfc ? t('Waiting for NFC...') : t('Import by NFC'),
                     ),
                     onPressed: _handlingNfc ? null : _readNfc,
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Scan the QR received from the business to add the card to the wallet.',
+                  Text(
+                    t('Scan the QR received from the business to add the card to the wallet.'),
                     textAlign: TextAlign.center,
                   ),
                   if (_message != null) ...[
@@ -111,7 +112,7 @@ class _ClientImportCardScreenState
     } on FormatException catch (error) {
       await _showScanError(error.message);
     } on Object catch (error) {
-      await _showScanError('Import failed: $error');
+      await _showScanError(tr('Importul a eșuat: $error', 'Import failed: $error'));
     }
   }
 
@@ -145,7 +146,7 @@ class _ClientImportCardScreenState
       if (!mounted) {
         return;
       }
-      setState(() => _message = 'NFC import failed: $error');
+      setState(() => _message = tr('Importul prin NFC a eșuat: $error', 'NFC import failed: $error'));
     } finally {
       if (mounted) {
         setState(() => _handlingNfc = false);
@@ -165,7 +166,7 @@ class _ClientImportCardScreenState
     if (existing != null) {
       final update = await _confirmUpdate(payload);
       if (update != true) {
-        setState(() => _message = 'The card already exists in the wallet.');
+        setState(() => _message = t('The card already exists in the wallet.'));
         return false;
       }
     }
@@ -188,7 +189,7 @@ class _ClientImportCardScreenState
       return true;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${_cardTypeLabel(payload.cardType)} imported.')),
+      SnackBar(content: Text(tr('${_cardTypeLabel(payload.cardType)} importat.', '${_cardTypeLabel(payload.cardType)} imported.'))),
     );
     context.go('/client/cards/${importedCard.walletCardId}');
     return true;
@@ -198,18 +199,18 @@ class _ClientImportCardScreenState
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Card Already Imported'),
+        title: Text(t('Card Already Imported')),
         content: Text(
-          '${_cardTypeLabel(payload.cardType)} "${payload.cardTitle}" already exists in the wallet. Do you want to update it?',
+          tr('${_cardTypeLabel(payload.cardType)} „${payload.cardTitle}” există deja în portofel. Vrei să-l actualizezi?', '${_cardTypeLabel(payload.cardType)} "${payload.cardTitle}" already exists in the wallet. Do you want to update it?'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('No'),
+            child: Text(t('No')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Update'),
+            child: Text(t('Update')),
           ),
         ],
       ),
@@ -233,7 +234,7 @@ class _ClientImportCardScreenState
 
 String _cardTypeLabel(String cardType) {
   return switch (cardType) {
-    'loyalty' => 'Loyalty Card',
-    _ => 'Membership',
+    'loyalty' => t('Loyalty Card'),
+    _ => t('Membership'),
   };
 }

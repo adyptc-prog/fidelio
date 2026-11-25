@@ -489,7 +489,7 @@ void main() {
       ).getLoyaltyCard('challenge-1');
       expect(result.isValid, isTrue);
       expect(updated?.currentStamps, 1);
-      expect(updated?.challengeStartedAt, scanTime);
+      expect(updated?.challengeStartedAt, sameMoment(scanTime));
     });
 
     test('rejects a loyalty card scanned after its validity date', () async {
@@ -1001,3 +1001,10 @@ Future<String> _dynamicRawPayload({
   );
   return service.encodeDynamicChallenge(payload);
 }
+
+/// Aceeași clipă, indiferent dacă data e UTC sau locală (baza de date
+/// întoarce datele în ora locală).
+Matcher sameMoment(DateTime expected) => predicate<DateTime?>(
+  (actual) => actual != null && actual.isAtSameMomentAs(expected),
+  'same moment as $expected',
+);

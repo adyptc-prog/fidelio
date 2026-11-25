@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BirthdayRewardCardScreen extends StatefulWidget {
   const BirthdayRewardCardScreen({
@@ -29,7 +30,7 @@ class _BirthdayRewardCardScreenState extends State<BirthdayRewardCardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Birthday Reward')),
+      appBar: AppBar(title: Text(t('Birthday Reward'))),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -60,13 +61,13 @@ class _BirthdayRewardCardScreenState extends State<BirthdayRewardCardScreen> {
               ],
               FilledButton.icon(
                 icon: const Icon(Icons.share),
-                label: Text(_isSharing ? 'Preparing...' : 'Share'),
+                label: Text(_isSharing ? t('Preparing...') : t('Share')),
                 onPressed: _isSharing ? null : _share,
               ),
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Done'),
+                child: Text(t('Done')),
               ),
             ],
           ),
@@ -97,16 +98,18 @@ class _BirthdayRewardCardScreenState extends State<BirthdayRewardCardScreen> {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(file.path)],
-          text:
+          text: tr(
+              'La mulți ani, ${widget.customerName}! Ai primit un cadou '
+              'de ziua ta de la ${widget.businessName}.',
               'Happy Birthday, ${widget.customerName}! You received a '
-              'birthday reward from ${widget.businessName}.',
+              'birthday reward from ${widget.businessName}.'),
         ),
       );
     } on Object catch (error) {
       if (!mounted) {
         return;
       }
-      setState(() => _errorMessage = 'Could not share the card: $error');
+      setState(() => _errorMessage = tr('Cardul nu a putut fi trimis: $error', 'Could not share the card: $error'));
     } finally {
       if (mounted) {
         setState(() => _isSharing = false);
@@ -148,7 +151,7 @@ class _BirthdayCard extends StatelessWidget {
           const Text('🎉', style: TextStyle(fontSize: 48)),
           const SizedBox(height: 12),
           Text(
-            'Happy Birthday, $customerName!',
+            tr('La mulți ani, $customerName!', 'Happy Birthday, $customerName!'),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: Colors.white,
@@ -158,14 +161,16 @@ class _BirthdayCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            "Congratulations! You've received a birthday reward on your "
-            '$businessName card.',
+            tr('Felicitări! Ai primit un cadou de ziua ta pe cardul '
+                '$businessName.',
+                "Congratulations! You've received a birthday reward on your "
+                '$businessName card.'),
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
           const SizedBox(height: 20),
           Text(
-            'Update your card on your next visit to $businessName.',
+            tr('Actualizează-ți cardul la următoarea vizită la $businessName.', 'Update your card on your next visit to $businessName.'),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.75),

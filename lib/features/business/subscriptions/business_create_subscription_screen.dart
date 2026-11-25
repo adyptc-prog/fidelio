@@ -8,6 +8,7 @@ import '../../../domain/value_objects/customer_status.dart';
 import '../../../domain/value_objects/subscription_type.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../clients/license_required_dialog.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessCreateSubscriptionScreen extends ConsumerStatefulWidget {
   const BusinessCreateSubscriptionScreen({super.key});
@@ -20,7 +21,7 @@ class BusinessCreateSubscriptionScreen extends ConsumerStatefulWidget {
 class _BusinessCreateSubscriptionScreenState
     extends ConsumerState<BusinessCreateSubscriptionScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Membership 10 entries');
+  final _nameController = TextEditingController(text: t('Membership 10 entries'));
   final _usesController = TextEditingController(text: '10');
   String? _selectedCustomerId;
   bool _isSaving = false;
@@ -37,7 +38,7 @@ class _BusinessCreateSubscriptionScreenState
     final customersState = ref.watch(businessCustomersControllerProvider);
 
     return SectionShell(
-      title: 'Create Membership',
+      title: t('Create Membership'),
       child: customersState.when(
         data: (state) => _buildForm(
           state.customers
@@ -46,7 +47,7 @@ class _BusinessCreateSubscriptionScreenState
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load customers: $error')),
+            Center(child: Text(tr('Clienții nu au putut fi încărcați: $error', 'Could not load customers: $error'))),
       ),
     );
   }
@@ -75,17 +76,17 @@ class _BusinessCreateSubscriptionScreenState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Issue Local Membership',
+                    t('Issue Local Membership'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 12),
                   if (customers.isEmpty)
-                    const Text('Add an active customer first.')
+                    Text(t('Add an active customer first.'))
                   else ...[
                     DropdownButtonFormField<String>(
                       initialValue: _selectedCustomerId,
-                      decoration: const InputDecoration(
-                        labelText: 'Client',
+                      decoration: InputDecoration(
+                        labelText: t('Client'),
                         border: OutlineInputBorder(),
                       ),
                       items: customers
@@ -105,8 +106,8 @@ class _BusinessCreateSubscriptionScreenState
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Membership Name',
+                      decoration: InputDecoration(
+                        labelText: t('Membership Name'),
                         border: OutlineInputBorder(),
                       ),
                       validator: _required,
@@ -114,8 +115,8 @@ class _BusinessCreateSubscriptionScreenState
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _usesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Entry Count',
+                      decoration: InputDecoration(
+                        labelText: t('Entry Count'),
                         border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.number,
@@ -124,7 +125,7 @@ class _BusinessCreateSubscriptionScreenState
                     const SizedBox(height: 12),
                     FilledButton.icon(
                       icon: const Icon(Icons.card_membership),
-                      label: Text(_isSaving ? 'Saving...' : 'Save Membership'),
+                      label: Text(_isSaving ? t('Saving...') : t('Save Membership')),
                       onPressed: _isSaving ? null : _saveSubscription,
                     ),
                   ],
@@ -139,7 +140,7 @@ class _BusinessCreateSubscriptionScreenState
 
   String? _required(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Required field.';
+      return t('Required field.');
     }
     return null;
   }
@@ -147,7 +148,7 @@ class _BusinessCreateSubscriptionScreenState
   String? _positiveNomber(String? value) {
     final parsed = int.tryParse(value ?? '');
     if (parsed == null || parsed <= 0) {
-      return 'Enter a positive number.';
+      return t('Enter a positive number.');
     }
     return null;
   }
@@ -186,7 +187,7 @@ class _BusinessCreateSubscriptionScreenState
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Membership was saved.')));
+      ).showSnackBar(SnackBar(content: Text(t('Membership was saved.'))));
     } on LicenseRequiredException {
       if (mounted) {
         await showLicenseRequiredDialog(context);
@@ -194,7 +195,7 @@ class _BusinessCreateSubscriptionScreenState
     } on Object catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not save membership: $error')),
+          SnackBar(content: Text(tr('Abonamentul nu a putut fi salvat: $error', 'Could not save membership: $error'))),
         );
       }
     } finally {

@@ -161,7 +161,7 @@ void main() {
     expect(updated?.birthMonth, 5);
     expect(updated?.birthDay, 13);
     expect(updated?.lastBirthdayPromptYear, 2025);
-    expect(updated?.lastVisitAt, now);
+    expect(updated?.lastVisitAt, sameMoment(now));
     expect(updated?.hasBirthday, isTrue);
     expect(updated?.rewardsEarned, 4);
 
@@ -279,11 +279,11 @@ void main() {
       LoyaltyProgramType.visitChallenge,
     );
     expect((await cards.getLoyaltyCard('loyalty-1'))?.challengeWindowDays, 7);
-    expect((await cards.getLoyaltyCard('loyalty-1'))?.challengeStartedAt, now);
-    expect((await cards.getLoyaltyCard('loyalty-1'))?.startsAt, now);
+    expect((await cards.getLoyaltyCard('loyalty-1'))?.challengeStartedAt, sameMoment(now));
+    expect((await cards.getLoyaltyCard('loyalty-1'))?.startsAt, sameMoment(now));
     expect(
       (await cards.getLoyaltyCard('loyalty-1'))?.validUntil,
-      now.add(const Duration(days: 90)),
+      sameMoment(now.add(const Duration(days: 90))),
     );
     expect(
       (await cards.getLoyaltyCard('loyalty-1'))?.linkedWalletId,
@@ -486,3 +486,10 @@ void main() {
     expect(() => checkIns.saveCheckIn(duplicateEvent), throwsA(anything));
   });
 }
+
+/// Aceeași clipă, indiferent dacă data e UTC sau locală (baza de date
+/// întoarce datele în ora locală).
+Matcher sameMoment(DateTime expected) => predicate<DateTime?>(
+  (actual) => actual != null && actual.isAtSameMomentAs(expected),
+  'same moment as $expected',
+);

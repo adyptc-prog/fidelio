@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import '../../domain/entities/usb_backup_entry.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class AndroidUsbBackupService {
   const AndroidUsbBackupService();
@@ -43,7 +44,7 @@ class AndroidUsbBackupService {
       {'businessId': businessId, 'businessName': businessName},
     );
     if (result == null) {
-      throw const FormatException('Backup response was empty.');
+      throw FormatException(t('Backup response was empty.'));
     }
     return UsbBackupEntry.fromJson(result);
   }

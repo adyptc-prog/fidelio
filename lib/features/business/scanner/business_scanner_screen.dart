@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../app/providers/business_check_in_providers.dart';
 import '../../../app/providers/scan_feedback_providers.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessScannerScreen extends ConsumerStatefulWidget {
   const BusinessScannerScreen({super.key});
@@ -30,7 +31,7 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return SectionShell(
-      title: 'Scan',
+      title: t('Scan'),
       child: ListView(
         children: [
           Card(
@@ -50,8 +51,8 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Scan the check-in QR shown by the client.',
+                  Text(
+                    t('Scan the check-in QR shown by the client.'),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -173,28 +174,30 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('New Referred Customer'),
+        title: Text(t('New Referred Customer')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'This card was shared by an existing customer. Enter the new '
-              "customer's details to register their card.",
+            Text(
+              tr('Cardul a fost trimis de un client existent. Introdu datele '
+                  'clientului nou ca să-i înregistrezi cardul.',
+                  'This card was shared by an existing customer. Enter the new '
+                  "customer's details to register their card."),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: nameController,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Customer Name',
+              decoration: InputDecoration(
+                labelText: t('Customer Name'),
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone optional',
+              decoration: InputDecoration(
+                labelText: t('Phone optional'),
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.phone,
@@ -204,21 +207,21 @@ class _BusinessScannerScreenState extends ConsumerState<BusinessScannerScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel')),
           ),
           FilledButton(
             onPressed: () {
               final name = nameController.text.trim();
               Navigator.of(context).pop(
                 _ReferralCustomerInfo(
-                  name: name.isEmpty ? 'New Customer' : name,
+                  name: name.isEmpty ? t('New Customer') : name,
                   phone: phoneController.text.trim().isEmpty
                       ? null
                       : phoneController.text.trim(),
                 ),
               );
             },
-            child: const Text('Register'),
+            child: Text(t('Register')),
           ),
         ],
       ),
@@ -278,14 +281,14 @@ class _ScanResultCard extends StatelessWidget {
               ),
               if (result.subscription!.remainingUses != null)
                 Text(
-                  'Entries remaining before validation: ${result.subscription!.remainingUses}',
+                  tr('Intrări rămase înainte de validare: ${result.subscription!.remainingUses}', 'Entries remaining before validation: ${result.subscription!.remainingUses}'),
                   textAlign: TextAlign.center,
                 ),
             ],
             const SizedBox(height: 12),
             OutlinedButton.icon(
               icon: const Icon(Icons.qr_code_scanner),
-              label: const Text('Scan Again'),
+              label: Text(t('Scan Again')),
               onPressed: onScanAgain,
             ),
           ],
@@ -308,109 +311,117 @@ class _ScanResultPresentation {
 
   factory _ScanResultPresentation.fromResult(CheckInScanResult result) {
     return switch (result.message) {
-      'threshold_reached' => const _ScanResultPresentation(
-        title: 'All Entries Reached!',
+      'threshold_reached' => _ScanResultPresentation(
+        title: t('All Entries Reached!'),
         description:
-            'All regular entries were used. The next entry will be the bonus one.',
+            t('All regular entries were used. The next entry will be the bonus one.'),
         icon: Icons.celebration,
       ),
-      'bonus_entry' => const _ScanResultPresentation(
-        title: 'This Entry Is Bonus!',
+      'bonus_entry' => _ScanResultPresentation(
+        title: t('This Entry Is Bonus!'),
         description:
-            'Bonus entry redeemed. This card is now fully used; create a new card for further visits.',
+            t('Bonus entry redeemed. This card is now fully used; create a new card for further visits.'),
         icon: Icons.stars,
       ),
-      'card_completed' => const _ScanResultPresentation(
-        title: 'Card Fully Used',
+      'card_completed' => _ScanResultPresentation(
+        title: t('Card Fully Used'),
         description:
-            'All entries, including the bonus, were already used. Create a new card for this client.',
+            t('All entries, including the bonus, were already used. Create a new card for this client.'),
         icon: Icons.block,
       ),
-      'invalid QR' => const _ScanResultPresentation(
-        title: 'Invalid or Expired QR',
-        description: 'Ask the client to generate a new code and scan again.',
+      'invalid QR' => _ScanResultPresentation(
+        title: t('Invalid or Expired QR'),
+        description: t('Ask the client to generate a new code and scan again.'),
         icon: Icons.timer_off,
       ),
-      'reused QR' => const _ScanResultPresentation(
-        title: 'QR Already Used',
+      'reused QR' => _ScanResultPresentation(
+        title: t('QR Already Used'),
         description:
-            'This code was already accepted and can no longer be used.',
+            t('This code was already accepted and can no longer be used.'),
         icon: Icons.replay_circle_filled,
       ),
-      'wallet mismatch' => const _ScanResultPresentation(
-        title: 'Different Client Wallet',
+      'wallet mismatch' => _ScanResultPresentation(
+        title: t('Different Client Wallet'),
         description:
-            'This card is already linked to another client phone. Ask the client to use the original phone wallet.',
+            t('This card is already linked to another client phone. Ask the client to use the original phone wallet.'),
         icon: Icons.phonelink_lock,
       ),
-      'expired' => const _ScanResultPresentation(
-        title: 'Membership Expired',
-        description: 'The card exists, but its validity period has passed.',
+      'expired' => _ScanResultPresentation(
+        title: t('Membership Expired'),
+        description: t('The card exists, but its validity period has passed.'),
         icon: Icons.event_busy,
       ),
-      'not_active_yet' => const _ScanResultPresentation(
-        title: 'Card Not Active Yet',
-        description: 'This card becomes valid on a future date.',
+      'not_active_yet' => _ScanResultPresentation(
+        title: t('Card Not Active Yet'),
+        description: t('This card becomes valid on a future date.'),
         icon: Icons.hourglass_top,
       ),
-      'no entries' => const _ScanResultPresentation(
-        title: 'No Entries Available',
-        description: 'The membership has no remaining entries.',
+      'no entries' => _ScanResultPresentation(
+        title: t('No Entries Available'),
+        description: t('The membership has no remaining entries.'),
         icon: Icons.remove_circle,
       ),
-      'suspended' => const _ScanResultPresentation(
-        title: 'Card Suspended',
-        description: 'The card is suspended and cannot be validated.',
+      'suspended' => _ScanResultPresentation(
+        title: t('Card Suspended'),
+        description: t('The card is suspended and cannot be validated.'),
         icon: Icons.pause_circle,
       ),
-      'unknown' => const _ScanResultPresentation(
-        title: 'Unknown Card',
+      'unknown' => _ScanResultPresentation(
+        title: t('Unknown Card'),
         description:
-            'The code does not match an active membership for this business.',
+            t('The code does not match an active membership for this business.'),
         icon: Icons.help,
       ),
-      'referral_registered' => const _ScanResultPresentation(
-        title: 'Referral Registered!',
-        description:
+      'referral_registered' => _ScanResultPresentation(
+        title: t('Referral Registered!'),
+        description: tr(
+            'Cardul nou a fost creat cu un bonus de bun venit, iar cel care '
+            'l-a recomandat a primit o recompensă pe cardul lui.',
             'The new card was created with a welcome bonus, and the '
-            'referrer received a reward on their card.',
+            'referrer received a reward on their card.'),
         icon: Icons.celebration,
       ),
-      'referral_registered_no_referrer' => const _ScanResultPresentation(
-        title: 'Card Registered',
-        description:
+      'referral_registered_no_referrer' => _ScanResultPresentation(
+        title: t('Card Registered'),
+        description: tr(
+            'Cardul nou a fost creat cu un bonus de bun venit. Cardul celui '
+            'care l-a recomandat nu mai există, deci nu s-a acordat recompensa.',
             'The new card was created with a welcome bonus. The referrer\'s '
-            'card could no longer be found, so no reward was granted.',
+            'card could no longer be found, so no reward was granted.'),
         icon: Icons.person_add_alt_1,
       ),
-      'referrals_disabled' => const _ScanResultPresentation(
-        title: 'Referrals Disabled',
-        description:
+      'referrals_disabled' => _ScanResultPresentation(
+        title: t('Referrals Disabled'),
+        description: tr(
+            'Codul e o invitație de recomandare, dar programul de recomandări '
+            'e oprit. Pornește-l din Setări ca să-l accepți.',
             'This code is a referral invite, but the referral program is '
-            'turned off. Enable it in Settings to accept it.',
+            'turned off. Enable it in Settings to accept it.'),
         icon: Icons.toggle_off,
       ),
-      'already_registered' => const _ScanResultPresentation(
-        title: 'Already Registered',
-        description: 'This referral code was already used to register a card.',
+      'already_registered' => _ScanResultPresentation(
+        title: t('Already Registered'),
+        description: t('This referral code was already used to register a card.'),
         icon: Icons.replay_circle_filled,
       ),
-      'not_a_referral' => const _ScanResultPresentation(
-        title: 'Not a Check-In Code',
-        description:
+      'not_a_referral' => _ScanResultPresentation(
+        title: t('Not a Check-In Code'),
+        description: tr(
+            'Pare un card care trebuie importat de client, nu scanat de '
+            'afacere.',
             'This looks like a card meant to be imported by a client, not '
-            'scanned by the business.',
+            'scanned by the business.'),
         icon: Icons.error_outline,
       ),
       _ =>
         result.isValid
-            ? const _ScanResultPresentation(
-                title: 'Access Validated',
-                description: 'Check-in recorded. The membership was updated.',
+            ? _ScanResultPresentation(
+                title: t('Access Validated'),
+                description: t('Check-in recorded. The membership was updated.'),
                 icon: Icons.check_circle,
               )
             : _ScanResultPresentation(
-                title: 'Scan Rejected',
+                title: t('Scan Rejected'),
                 description: result.message,
                 icon: Icons.error,
               ),

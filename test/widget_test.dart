@@ -689,7 +689,7 @@ void main() {
   });
 
   testWidgets(
-    'business membership save shows license message after free limit',
+    'business membership shows license message before the form at free limit',
     (tester) async {
       final db = AppDatabase.memory();
       addTearDown(db.close);
@@ -711,8 +711,9 @@ void main() {
 
       await tester.tap(find.text('Create Membership'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
+
+      // Limita e verificată înainte de formular — nu se mai completează degeaba.
+      expect(find.text('Save'), findsNothing);
 
       expect(find.text('License required'), findsOneWidget);
       expect(find.textContaining('voltacademy007@gmail.com'), findsOneWidget);
@@ -723,7 +724,7 @@ void main() {
     },
   );
 
-  testWidgets('business loyalty save shows license message after free limit', (
+  testWidgets('business loyalty shows license message before the form at free limit', (
     tester,
   ) async {
     final db = AppDatabase.memory();
@@ -746,8 +747,9 @@ void main() {
 
     await tester.tap(find.text('Create Loyalty Card'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
+
+    // Limita e verificată înainte de formular — nu se mai completează degeaba.
+    expect(find.text('Save'), findsNothing);
 
     expect(find.text('License required'), findsOneWidget);
     expect(find.textContaining('voltacademy007@gmail.com'), findsOneWidget);

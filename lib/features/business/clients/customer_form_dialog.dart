@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers/business_customers_providers.dart';
 import '../../../domain/entities/customer_record.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 Future<void> showCustomerFormDialog(
   BuildContext context, {
@@ -60,7 +61,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.customer == null ? 'Add Customer' : 'Edit Customer'),
+      title: Text(widget.customer == null ? t('Add Customer') : t('Edit Customer')),
       content: SizedBox(
         width: 520,
         child: Form(
@@ -71,16 +72,16 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Customer Name optional',
+                  decoration: InputDecoration(
+                    labelText: t('Customer Name optional'),
                     border: OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Phone optional',
+                  decoration: InputDecoration(
+                    labelText: t('Phone optional'),
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.phone,
@@ -89,8 +90,8 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email optional',
+                  decoration: InputDecoration(
+                    labelText: t('Email optional'),
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
@@ -99,8 +100,8 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes optional',
+                  decoration: InputDecoration(
+                    labelText: t('Notes optional'),
                     border: OutlineInputBorder(),
                   ),
                   minLines: 2,
@@ -111,7 +112,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
                   onTap: _pickBirthday,
                   child: InputDecorator(
                     decoration: InputDecoration(
-                      labelText: 'Birthday optional',
+                      labelText: t('Birthday optional'),
                       border: const OutlineInputBorder(),
                       suffixIcon: _birthMonth == null
                           ? const Icon(Icons.cake_outlined)
@@ -134,9 +135,9 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(t('Cancel')),
         ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
+        FilledButton(onPressed: _save, child: Text(t('Save'))),
       ],
     );
   }
@@ -153,7 +154,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
       firstDate: DateTime(neutralYear),
       lastDate: DateTime(neutralYear, 12, 31),
       initialDatePickerMode: DatePickerMode.day,
-      helpText: 'Select birthday (year is ignored)',
+      helpText: t('Select birthday (year is ignored)'),
     );
     if (picked == null) {
       return;
@@ -166,21 +167,21 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
 
   String _birthdayLabel() {
     if (_birthMonth == null || _birthDay == null) {
-      return 'Not set';
+      return t('Not set');
     }
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
+    final months = [
+      t('January'),
+      t('February'),
+      t('March'),
+      t('April'),
+      t('May'),
+      t('June'),
+      t('July'),
+      t('August'),
+      t('September'),
+      t('October'),
+      t('November'),
+      t('December'),
     ];
     return '${months[_birthMonth! - 1]} $_birthDay';
   }
@@ -188,7 +189,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
   String? _nameOrPhone() {
     if (_nameController.text.trim().isEmpty &&
         _phoneController.text.trim().isEmpty) {
-      return 'Enter a customer name or phone number.';
+      return t('Enter a customer name or phone number.');
     }
     return null;
   }
@@ -198,7 +199,7 @@ class _CustomerFormDialogState extends ConsumerState<_CustomerFormDialog> {
     if (trimmed.isEmpty || trimmed.contains('@')) {
       return null;
     }
-    return 'Enter a valid email or leave the field empty.';
+    return t('Enter a valid email or leave the field empty.');
   }
 
   Future<void> _save() async {

@@ -11,6 +11,7 @@ import '../../../domain/value_objects/customer_status.dart';
 import '../../../presentation/layouts/section_shell.dart';
 import '../../../presentation/widgets/customer_rank_badge.dart';
 import 'customer_form_dialog.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessClientsScreen extends ConsumerWidget {
   const BusinessClientsScreen({super.key});
@@ -23,16 +24,16 @@ class BusinessClientsScreen extends ConsumerWidget {
         const AppSettings(selectedMode: null);
 
     return SectionShell(
-      title: 'Customers',
+      title: t('Customers'),
       child: Column(
         children: [
           Row(
             children: [
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     prefixIcon: Icon(Icons.search),
-                    labelText: 'Search by name, phone, or email',
+                    labelText: t('Search by name, phone, or email'),
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (value) {
@@ -44,7 +45,7 @@ class BusinessClientsScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
               IconButton.filled(
-                tooltip: 'Add Customer',
+                tooltip: t('Add Customer'),
                 icon: const Icon(Icons.person_add),
                 onPressed: () => showCustomerFormDialog(context),
               ),
@@ -59,7 +60,7 @@ class BusinessClientsScreen extends ConsumerWidget {
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stackTrace) =>
-                  Center(child: Text('Could not load customers: $error')),
+                  Center(child: Text(tr('Clienții nu au putut fi încărcați: $error', 'Could not load customers: $error'))),
             ),
           ),
         ],
@@ -72,7 +73,7 @@ String _customerSubtitle(CustomerRecord customer) {
   final parts = [
     if (customer.phone != null) customer.phone!,
     if (customer.email != null) customer.email!,
-    customer.status == CustomerStatus.active ? 'active' : 'inactive',
+    customer.status == CustomerStatus.active ? t('Active') : t('Inactive'),
     rankLabel(rankForRewards(customer.rewardsEarned)),
   ];
   return parts.join(' - ');
@@ -87,9 +88,9 @@ class _CustomersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (customers.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'No customers match the current search.',
+          t('No customers match the current search.'),
           textAlign: TextAlign.center,
         ),
       );
@@ -226,7 +227,7 @@ class _CustomerGridCard extends StatelessWidget {
     final parts = [
       if (customer.phone != null) customer.phone!,
       if (customer.email != null) customer.email!,
-      customer.status == CustomerStatus.active ? 'active' : 'inactive',
+      customer.status == CustomerStatus.active ? t('Active') : t('Inactive'),
       rankLabel(rankForRewards(customer.rewardsEarned)),
     ];
     return parts.join(' · ');

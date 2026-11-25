@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'providers/app_settings_providers.dart';
 import 'providers/business_profile_providers.dart';
+import 'localization/app_language.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 import '../domain/entities/app_settings.dart';
@@ -106,17 +108,28 @@ class _RouterAppState extends State<_RouterApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'Fidelio',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: widget.settings.darkMode ? ThemeMode.dark : ThemeMode.light,
-      builder: (context, child) => _ScaledApp(
-        zoomMode: widget.settings.zoomMode,
-        child: child ?? const SizedBox.shrink(),
+    // La schimbarea limbii, toată interfața se reconstruiește (KeyedSubtree),
+    // ca textele `t(...)` să fie citite din nou în limba aleasă.
+    return ValueListenableBuilder<String>(
+      valueListenable: AppLanguage.current,
+      builder: (context, language, _) => MaterialApp.router(
+        title: 'Fidelio',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: widget.settings.darkMode ? ThemeMode.dark : ThemeMode.light,
+        locale: Locale(language),
+        supportedLocales: const [Locale('ro'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        builder: (context, child) => KeyedSubtree(
+          key: ValueKey(language),
+          child: _ScaledApp(
+            zoomMode: widget.settings.zoomMode,
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
+        routerConfig: _router,
       ),
-      routerConfig: _router,
     );
   }
 }
@@ -197,7 +210,7 @@ class _SettingsErrorScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'Could not load local settings: $message',
+            tr('Nu s-au putut încărca setările locale: $message', 'Could not load local settings: $message'),
             textAlign: TextAlign.center,
           ),
         ),

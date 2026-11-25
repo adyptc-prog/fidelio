@@ -9,6 +9,7 @@ import '../../domain/entities/customer_record.dart';
 import '../../domain/value_objects/customer_status.dart';
 import 'app_settings_providers.dart';
 import 'business_profile_providers.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
   return DriftCustomerRepository(ref.watch(appDatabaseProvider));
@@ -70,8 +71,8 @@ class BusinessCustomersController
     final normalizedName = displayName.trim();
     final normalizedPhone = phone?.trim() ?? '';
     if (normalizedName.isEmpty && normalizedPhone.isEmpty) {
-      throw const CustomerValidationException(
-        'Enter a customer name or phone number.',
+      throw CustomerValidationException(
+        t('Enter a customer name or phone number.'),
       );
     }
 
@@ -159,7 +160,7 @@ class BusinessCustomersController
   Future<String> _businessId() async {
     final profile = await ref.read(businessProfileControllerProvider.future);
     if (profile == null) {
-      throw StateError('Business profile must be configured first.');
+      throw StateError(t('Business profile must be configured first.'));
     }
     return profile.businessId;
   }

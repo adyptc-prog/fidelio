@@ -12,6 +12,7 @@ import '../../../domain/entities/loyalty_card.dart';
 import '../../../domain/value_objects/card_status.dart';
 import '../../../domain/value_objects/loyalty_program_type.dart';
 import '../../../presentation/layouts/section_shell.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 class BusinessLoyaltyDetailsScreen extends ConsumerWidget {
   const BusinessLoyaltyDetailsScreen({required this.loyaltyId, super.key});
@@ -24,29 +25,29 @@ class BusinessLoyaltyDetailsScreen extends ConsumerWidget {
     final business = ref.watch(businessProfileControllerProvider);
 
     return SectionShell(
-      title: 'Loyalty Card',
+      title: t('Loyalty Card'),
       child: loyaltyCard.when(
         data: (card) {
           if (card == null) {
-            return const Center(child: Text('Card not found.'));
+            return Center(child: Text(t('Card not found.')));
           }
           return business.when(
             data: (business) {
               if (business == null) {
-                return const Center(
-                  child: Text('Business profile is not configured.'),
+                return Center(
+                  child: Text(t('Business profile is not configured.')),
                 );
               }
               return _LoyaltyDetails(business: business, card: card);
             },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, stackTrace) =>
-                Center(child: Text('Could not load business: $error')),
+                Center(child: Text(tr('Nu s-a putut încărca afacerea: $error', 'Could not load business: $error'))),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) =>
-            Center(child: Text('Could not load card: $error')),
+            Center(child: Text(tr('Cardul nu a putut fi încărcat: $error', 'Could not load card: $error'))),
       ),
     );
   }
@@ -88,38 +89,38 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
-                _InfoLine(label: 'Status', value: _statusValue(widget.card)),
+                _InfoLine(label: t('Status'), value: _statusValue(widget.card)),
                 _InfoLine(
                   label: _progressLabel(widget.card.programType),
                   value: _progressValue(widget.card),
                 ),
                 if (widget.card.programType == LoyaltyProgramType.points)
                   _InfoLine(
-                    label: 'Rule',
-                    value: '${widget.card.pointsPerScan ?? 10} points/scan',
+                    label: t('Rule'),
+                    value: tr('${widget.card.pointsPerScan ?? 10} puncte/scanare', '${widget.card.pointsPerScan ?? 10} points/scan'),
                   ),
                 if (widget.card.programType ==
                     LoyaltyProgramType.visitChallenge)
                   _InfoLine(
-                    label: 'Period',
+                    label: t('Period'),
                     value:
-                        '${widget.card.challengeWindowDays ?? 30} days'
-                        '${_challengeEndsAt(widget.card)}',
+                        tr('${widget.card.challengeWindowDays ?? 30} zile', '${widget.card.challengeWindowDays ?? 30} days') +
+                        _challengeEndsAt(widget.card),
                   ),
-                _InfoLine(label: 'Reward', value: _rewardValue(widget.card)),
+                _InfoLine(label: t('Reward'), value: _rewardValue(widget.card)),
                 _InfoLine(
-                  label: 'Valid From',
+                  label: t('Valid From'),
                   value: _formatDate(
                     widget.card.startsAt ?? widget.card.createdAt,
                   ),
                 ),
                 _InfoLine(
-                  label: 'Valid Until',
+                  label: t('Valid Until'),
                   value: widget.card.validUntil == null
-                      ? 'No expiration'
+                      ? t('No expiration')
                       : _formatDate(widget.card.validUntil!),
                 ),
-                _InfoLine(label: 'Card ID', value: widget.card.cardId),
+                _InfoLine(label: t('Card ID'), value: widget.card.cardId),
               ],
             ),
           ),
@@ -127,7 +128,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
         const SizedBox(height: 12),
         OutlinedButton.icon(
           icon: const Icon(Icons.edit_calendar),
-          label: const Text('Edit Validity'),
+          label: Text(t('Edit Validity')),
           onPressed: _isDeleting ? null : _editValidity,
         ),
         const SizedBox(height: 12),
@@ -136,14 +137,14 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (widget.card.isCompleted)
-                const Text(
-                  'This card has been fully used. Create a new card for this client.',
+                Text(
+                  t('This card has been fully used. Create a new card for this client.'),
                   textAlign: TextAlign.center,
                 )
               else ...[
                 FilledButton.icon(
                   icon: const Icon(Icons.add_task),
-                  label: Text(_isAddingStamp ? 'Updating...' : 'Add Stamp'),
+                  label: Text(_isAddingStamp ? t('Updating...') : t('Add Stamp')),
                   onPressed:
                       (_isAddingStamp ||
                           widget.card.currentStamps >=
@@ -158,8 +159,8 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
                     icon: const Icon(Icons.stars),
                     label: Text(
                       _isRedeemingReward
-                          ? 'Redeeming...'
-                          : 'Redeem Bonus Entry',
+                          ? t('Redeeming...')
+                          : t('Redeem Bonus Entry'),
                     ),
                     onPressed: _isRedeemingReward
                         ? null
@@ -170,7 +171,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 icon: const Icon(Icons.delete_outline),
-                label: Text(_isDeleting ? 'Deleting...' : 'Delete Card'),
+                label: Text(_isDeleting ? t('Deleting...') : t('Delete Card')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.error,
                 ),
@@ -181,21 +182,21 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
         else ...[
           FilledButton.icon(
             icon: const Icon(Icons.qr_code_2),
-            label: const Text('Send to Client by QR'),
+            label: Text(t('Send to Client by QR')),
             onPressed: () => setState(() => _showQr = true),
           ),
           const SizedBox(height: 8),
           FilledButton.tonalIcon(
             icon: const Icon(Icons.nfc),
             label: Text(
-              _isWritingNfc ? 'Preparing NFC...' : 'Send to Client by NFC',
+              _isWritingNfc ? t('Preparing NFC...') : t('Send to Client by NFC'),
             ),
             onPressed: _isWritingNfc ? null : () => _writeNfc(qrData!),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             icon: const Icon(Icons.delete_outline),
-            label: Text(_isDeleting ? 'Deleting...' : 'Delete Card'),
+            label: Text(_isDeleting ? t('Deleting...') : t('Delete Card')),
             style: OutlinedButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
@@ -212,8 +213,8 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    const Text(
-                      'The client scans this code from Client Mode to add the card to the wallet.',
+                    Text(
+                      t('The client scans this code from Client Mode to add the card to the wallet.'),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
@@ -252,12 +253,12 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
         return;
       }
       final rewardMessage = updated.isBonusPending
-          ? ' All entries reached! The next entry will be the bonus one.'
+          ? t(' All entries reached! The next entry will be the bonus one.')
           : '';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Stamp added. Progress: ${updated.currentStamps}/${updated.rewardThreshold}.$rewardMessage',
+            tr('Ștampilă adăugată. Progres: ${updated.currentStamps}/${updated.rewardThreshold}.$rewardMessage', 'Stamp added. Progress: ${updated.currentStamps}/${updated.rewardThreshold}.$rewardMessage'),
           ),
         ),
       );
@@ -267,7 +268,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not add stamp: $error')));
+      ).showSnackBar(SnackBar(content: Text(tr('Ștampila nu a putut fi adăugată: $error', 'Could not add stamp: $error'))));
     } finally {
       if (mounted) {
         setState(() => _isAddingStamp = false);
@@ -279,18 +280,18 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Redeem bonus entry?'),
-        content: const Text(
-          'This entry is bonus. After redeeming it, this card will be fully used and cannot be used again — a new card will be needed for this client.',
+        title: Text(t('Redeem bonus entry?')),
+        content: Text(
+          t('This entry is bonus. After redeeming it, this card will be fully used and cannot be used again — a new card will be needed for this client.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Redeem'),
+            child: Text(t('Redeem')),
           ),
         ],
       ),
@@ -308,9 +309,9 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'This entry is bonus! Card is now fully used — create a new card for this client.',
+            t('This entry is bonus! Card is now fully used — create a new card for this client.'),
           ),
         ),
       );
@@ -319,7 +320,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not redeem reward: $error')),
+        SnackBar(content: Text(tr('Recompensa nu a putut fi acordată: $error', 'Could not redeem reward: $error'))),
       );
     } finally {
       if (mounted) {
@@ -332,18 +333,18 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete card?'),
-        content: const Text(
-          'Are you sure you want to permanently delete this card from the local database?',
+        title: Text(t('Delete card?')),
+        content: Text(
+          t('Are you sure you want to permanently delete this card from the local database?'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(t('Cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Delete'),
+            child: Text(t('Delete')),
           ),
         ],
       ),
@@ -366,7 +367,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Could not delete card: $error')));
+      ).showSnackBar(SnackBar(content: Text(tr('Cardul nu a putut fi șters: $error', 'Could not delete card: $error'))));
     } finally {
       if (mounted) {
         setState(() => _isDeleting = false);
@@ -399,13 +400,13 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
       }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Validity dates updated.')));
+      ).showSnackBar(SnackBar(content: Text(t('Validity dates updated.'))));
     } on Object catch (error) {
       if (!mounted) {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not update validity: $error')),
+        SnackBar(content: Text(tr('Valabilitatea nu a putut fi actualizată: $error', 'Could not update validity: $error'))),
       );
     }
   }
@@ -414,7 +415,7 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
     setState(() {
       _isWritingNfc = true;
       _nfcMessage =
-          'Waiting for the client phone. Ask the client to tap Import by NFC and hold it near this device.';
+          t('Waiting for the client phone. Ask the client to tap Import by NFC and hold it near this device.');
     });
 
     try {
@@ -422,12 +423,12 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
       if (!mounted) {
         return;
       }
-      setState(() => _nfcMessage = 'Card sent by NFC.');
+      setState(() => _nfcMessage = t('Card sent by NFC.'));
     } on Object catch (error) {
       if (!mounted) {
         return;
       }
-      setState(() => _nfcMessage = 'NFC export failed: $error');
+      setState(() => _nfcMessage = tr('Trimiterea prin NFC a eșuat: $error', 'NFC export failed: $error'));
     } finally {
       if (mounted) {
         setState(() => _isWritingNfc = false);
@@ -438,10 +439,10 @@ class _LoyaltyDetailsState extends ConsumerState<_LoyaltyDetails> {
 
 String _progressLabel(LoyaltyProgramType type) {
   return switch (type) {
-    LoyaltyProgramType.stamps => 'Stamps',
-    LoyaltyProgramType.points => 'Points',
-    LoyaltyProgramType.visitChallenge => 'Visits',
-    LoyaltyProgramType.delivery => 'Stamps',
+    LoyaltyProgramType.stamps => t('Stamps'),
+    LoyaltyProgramType.points => t('Points'),
+    LoyaltyProgramType.visitChallenge => t('Visits'),
+    LoyaltyProgramType.delivery => t('Stamps'),
   };
 }
 
@@ -451,17 +452,23 @@ String _progressValue(LoyaltyCard card) {
 
 String _statusValue(LoyaltyCard card) {
   if (card.isCompleted) {
-    return 'fully used';
+    return t('Fully used');
+  }
+  final validUntil = card.validUntil;
+  if (card.status == CardStatus.active &&
+      validUntil != null &&
+      DateUtils.dateOnly(validUntil).isBefore(DateUtils.dateOnly(DateTime.now()))) {
+    return t('Expired');
   }
   return _statusLabel(card.status);
 }
 
 String _rewardValue(LoyaltyCard card) {
   if (card.isCompleted) {
-    return 'fully used — create a new card';
+    return t('fully used — create a new card');
   }
   if (card.isBonusPending) {
-    return 'next entry is bonus';
+    return t('next entry is bonus');
   }
   return _remainingValue(card);
 }
@@ -469,10 +476,10 @@ String _rewardValue(LoyaltyCard card) {
 String _remainingValue(LoyaltyCard card) {
   final remaining = card.rewardThreshold - card.currentStamps;
   return switch (card.programType) {
-    LoyaltyProgramType.stamps => '$remaining stamps remaining',
-    LoyaltyProgramType.points => '$remaining points remaining',
-    LoyaltyProgramType.visitChallenge => '$remaining visits remaining',
-    LoyaltyProgramType.delivery => '$remaining stamps remaining',
+    LoyaltyProgramType.stamps => tr('mai sunt $remaining ștampile', '$remaining stamps remaining'),
+    LoyaltyProgramType.points => tr('mai sunt $remaining puncte', '$remaining points remaining'),
+    LoyaltyProgramType.visitChallenge => tr('mai sunt $remaining vizite', '$remaining visits remaining'),
+    LoyaltyProgramType.delivery => tr('mai sunt $remaining ștampile', '$remaining stamps remaining'),
   };
 }
 
@@ -484,7 +491,7 @@ String _challengeEndsAt(LoyaltyCard card) {
   final expiresAt = startedAt.add(
     Duration(days: card.challengeWindowDays ?? 30),
   );
-  return ', until ${_formatDate(expiresAt)}';
+  return tr(', până la ${_formatDate(expiresAt)}', ', until ${_formatDate(expiresAt)}');
 }
 
 String _formatDate(DateTime value) {
@@ -519,12 +526,12 @@ class _InfoLine extends StatelessWidget {
 
 String _statusLabel(CardStatus status) {
   return switch (status) {
-    CardStatus.active => 'active',
-    CardStatus.expired => 'expired',
-    CardStatus.suspended => 'suspended',
-    CardStatus.cancelled => 'cancelled',
-    CardStatus.draft => 'draft',
-    CardStatus.revoked => 'revoked',
+    CardStatus.active => t('Active'),
+    CardStatus.expired => t('Expired'),
+    CardStatus.suspended => t('Suspended'),
+    CardStatus.cancelled => t('Cancelled'),
+    CardStatus.draft => t('Draft'),
+    CardStatus.revoked => t('Revoked'),
   };
 }
 
@@ -569,7 +576,7 @@ class _ValidityEditDialogState extends State<_ValidityEditDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Edit Validity'),
+      title: Text(t('Edit Validity')),
       content: SizedBox(
         width: 420,
         child: Column(
@@ -578,8 +585,8 @@ class _ValidityEditDialogState extends State<_ValidityEditDialog> {
             TextFormField(
               controller: _startsAtController,
               readOnly: true,
-              decoration: const InputDecoration(
-                labelText: 'Valid From',
+              decoration: InputDecoration(
+                labelText: t('Valid From'),
                 border: OutlineInputBorder(),
                 suffixIcon: Icon(Icons.calendar_today),
               ),
@@ -590,7 +597,7 @@ class _ValidityEditDialogState extends State<_ValidityEditDialog> {
               controller: _validUntilController,
               readOnly: true,
               decoration: InputDecoration(
-                labelText: 'Valid Until (optional)',
+                labelText: t('Valid Until (optional)'),
                 border: const OutlineInputBorder(),
                 suffixIcon: _validUntil == null
                     ? const Icon(Icons.calendar_today)
@@ -610,24 +617,30 @@ class _ValidityEditDialogState extends State<_ValidityEditDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(t('Cancel')),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(
             _ValidityEditResult(startsAt: _startsAt, validUntil: _validUntil),
           ),
-          child: const Text('Save'),
+          child: Text(t('Save')),
         ),
       ],
     );
   }
 
   Future<void> _pickDate({required bool isStart}) async {
-    final initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    // Sfârșitul nu poate fi înaintea începutului: calendarul pentru
+    // sfârșit începe de la data de început.
+    final startDay = DateUtils.dateOnly(_startsAt);
+    var initialDate = isStart ? _startsAt : (_validUntil ?? _startsAt);
+    if (!isStart && initialDate.isBefore(startDay)) {
+      initialDate = startDay;
+    }
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime(2020),
+      firstDate: isStart ? DateTime(2020) : startDay,
       lastDate: DateTime(2100),
     );
     if (picked == null) {
@@ -649,7 +662,7 @@ class _ValidityEditDialogState extends State<_ValidityEditDialog> {
   void _syncDateControllers() {
     _startsAtController.text = _formatDate(_startsAt);
     _validUntilController.text = _validUntil == null
-        ? 'No expiration'
+        ? t('No expiration')
         : _formatDate(_validUntil!);
   }
 }

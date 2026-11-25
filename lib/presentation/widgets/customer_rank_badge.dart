@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/value_objects/customer_rank.dart';
+import 'package:fidelio/app/localization/app_language.dart';
 
 IconData rankIcon(CustomerRank rank) {
   return switch (rank) {
@@ -26,11 +27,11 @@ Color rankColor(CustomerRank rank) {
 
 String rankLabel(CustomerRank rank) {
   return switch (rank) {
-    CustomerRank.entry => 'Entry',
-    CustomerRank.bronze => 'Bronze',
-    CustomerRank.silver => 'Silver',
-    CustomerRank.gold => 'Gold',
-    CustomerRank.platinum => 'Platinum',
+    CustomerRank.entry => t('Entry'),
+    CustomerRank.bronze => t('Bronze'),
+    CustomerRank.silver => t('Silver'),
+    CustomerRank.gold => t('Gold'),
+    CustomerRank.platinum => t('Platinum'),
     CustomerRank.vip => 'VIP',
   };
 }
